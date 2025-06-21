@@ -335,31 +335,6 @@ const ACTransitMap = () => {
         </button>
       </div>
 
-      {/* Legend */}
-      <div style={{
-        position: 'absolute',
-        bottom: '20px',
-        right: '20px',
-        background: 'rgba(255, 255, 255, 0.95)',
-        padding: '12px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '12px',
-        zIndex: 1000
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{
-            width: '16px',
-            height: '16px',
-            background: '#ff4444',
-            clipPath: 'polygon(50% 0%, 20% 100%, 80% 100%)',
-            border: '1px solid white'
-          }}></div>
-          <span style={{ color: '#333' }}>Bus (arrow shows direction)</span>
-        </div>
-      </div>
-
       {/* CSS for animations */}
       <style>{`
         @keyframes spin {
