@@ -3,6 +3,8 @@ import './App.css'
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 
+let BUS_LOCATIONS_FETCH_COUNT = 0;
+
 const ACTransitMap = () => {
   const mapContainer = useRef();
   const map = useRef();
@@ -20,6 +22,8 @@ const ACTransitMap = () => {
       }
       const data = await response.json();
       console.log('Bus data received:', data);
+      BUS_LOCATIONS_FETCH_COUNT += 1;
+
       setBusData(data);
       setError(null);
     } catch (err) {
@@ -33,6 +37,14 @@ const ACTransitMap = () => {
   // Initialize map
   useEffect(() => {
     if (!mapContainer.current) return;
+
+    // Load MapLibre CSS if not already loaded
+    if (!document.querySelector('link[href*="maplibre-gl"]')) {
+      const cssLink = document.createElement('link');
+      cssLink.rel = 'stylesheet';
+      cssLink.href = 'https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css';
+      document.head.appendChild(cssLink);
+    }
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
@@ -126,13 +138,12 @@ const ACTransitMap = () => {
 
     console.log('Processing bus data:', busData.length, 'buses');
 
-    const features = busData.map((bus, index) => {
+    const features = busData.filter(ea => ea.vehicle.trip).map((bus, index) => {
       const lat = bus.vehicle.position.latitude;
       const lng = bus.vehicle.position.longitude;
       const bearing = bus.vehicle.position.bearing;
       const speed = bus.vehicle.position.speed;
-      
-      console.log(`Bus ${index}:`, { lat, lng, bearing, vehicleId: bus.vehicle_id || bus.id });
+      const routeId = bus.vehicle.trip.routeId;
       
       return {
         type: 'Feature',
@@ -142,7 +153,7 @@ const ACTransitMap = () => {
         },
         properties: {
           bearing: bearing,
-          vehicleId: bus.vehicle.vehicle.id,
+          routeId: routeId,
           speed: speed,
         }
       };
@@ -173,7 +184,7 @@ const ACTransitMap = () => {
         return bounds.extend(coord);
       }, new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
       
-      map.current.fitBounds(bounds, { padding: 50 });
+      if (BUS_LOCATIONS_FETCH_COUNT === 1) map.current.fitBounds(bounds, { padding: 50 });
       console.log('Fitted bounds to show all buses');
     }
   }, [busData]);
@@ -189,8 +200,9 @@ const ACTransitMap = () => {
     if (!map.current) return;
 
     const popup = new maplibregl.Popup({
-      closeButton: false,
-      closeOnClick: false
+      closeButton: true,
+      closeOnClick: false,
+      // maxWidth: '300px'
     });
 
     const handleClick = (e) => {
@@ -200,17 +212,17 @@ const ACTransitMap = () => {
 
       if (features.length > 0) {
         const feature = features[0];
-        const { vehicleId, route, bearing } = feature.properties;
-        
+        const { routeId, bearing } = feature.properties;
+
+        const htmlString = `
+          <div style="font-family: Arial, sans-serif; font-size: 12px; color: #000">
+            <strong>Route: ${routeId}</strong><br/>
+            Bearing: ${Math.round(bearing)}°
+          </div>`
+
         popup
           .setLngLat(feature.geometry.coordinates)
-          .setHTML(`
-            <div style="font-family: Arial, sans-serif; font-size: 12px;">
-              <strong>Vehicle ${vehicleId}</strong><br/>
-              Route: ${route}<br/>
-              Bearing: ${Math.round(bearing)}°
-            </div>
-          `)
+          .setHTML(htmlString)
           .addTo(map.current);
       } else {
         popup.remove();
@@ -220,10 +232,6 @@ const ACTransitMap = () => {
     map.current.on('click', 'bus-arrows', handleClick);
     map.current.on('mouseenter', 'bus-arrows', () => {
       map.current.getCanvas().style.cursor = 'pointer';
-    });
-    map.current.on('mouseleave', 'bus-arrows', () => {
-      map.current.getCanvas().style.cursor = '';
-      popup.remove();
     });
 
     return () => {
