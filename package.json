@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build-risky": "vite build",
+    "build-risky": "vite build --base=/actransit/",
     "lint": "eslint .",
     "preview": "vite preview"
   },
