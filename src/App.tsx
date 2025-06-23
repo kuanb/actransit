@@ -48,6 +48,7 @@ const ACTransitMap = () => {
   const [busHistoryData, setBusHistoryData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [routeFilter, setRouteFilter] = useState('');
 
   // Fetch bus locations
   const fetchBusLocations = async () => {
@@ -257,7 +258,16 @@ const ACTransitMap = () => {
 
     console.log('Processing bus data:', busData.length, 'buses');
 
-    const features = convertBusDataToFeatures(busData);
+    let features = convertBusDataToFeatures(busData);
+
+    // Filter by route ID if filter is set
+    if (routeFilter.trim()) {
+      features = features.filter(feature => 
+        feature.properties.routeId && 
+        feature.properties.routeId.includes(routeFilter.trim())
+      );
+      console.log('Filtered to', features.length, 'buses matching route filter:', routeFilter);
+    }
 
     console.log('Valid features:', features.length);
 
@@ -279,7 +289,7 @@ const ACTransitMap = () => {
       if (BUS_LOCATIONS_FETCH_COUNT === 1) map.current.fitBounds(bounds, { padding: 50 });
       console.log('Fitted bounds to show all buses');
     }
-  }, [busData]);
+  }, [busData, routeFilter]);
 
   // Update map with bus history data
   useEffect(() => {
@@ -677,6 +687,43 @@ const ACTransitMap = () => {
             </p>
           </div>
         )}
+        
+        {/* Route Filter */}
+        <div style={{ marginTop: '10px' }}>
+          <label style={{ 
+            display: 'block', 
+            fontSize: '12px', 
+            color: '#333', 
+            marginBottom: '5px',
+            fontWeight: 'bold'
+          }}>
+            Route Filter:
+          </label>
+          <input
+            type="text"
+            value={routeFilter}
+            onChange={(e) => setRouteFilter(e.target.value)}
+            placeholder="e.g., 33, 51, 800..."
+            style={{
+              width: '100%',
+              padding: '8px 10px',
+              border: '1px solid #ddd',
+              borderRadius: '4px',
+              fontSize: '12px',
+              boxSizing: 'border-box'
+            }}
+          />
+          {routeFilter && (
+            <div style={{ 
+              marginTop: '5px', 
+              fontSize: '11px', 
+              color: '#666',
+              fontStyle: 'italic'
+            }}>
+              Showing buses with route ID containing "{routeFilter}"
+            </div>
+          )}
+        </div>
         <button
           onClick={fetchBusLocations}
           disabled={loading}
