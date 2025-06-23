@@ -50,6 +50,26 @@ const ACTransitMap = () => {
   const [error, setError] = useState(null);
   const [routeFilter, setRouteFilter] = useState('');
 
+  // Initialize route filter from URL query parameter
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const filterFromUrl = urlParams.get('route');
+    if (filterFromUrl) {
+      setRouteFilter(filterFromUrl);
+    }
+  }, []);
+
+  // Update URL when route filter changes
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (routeFilter.trim()) {
+      url.searchParams.set('route', routeFilter.trim());
+    } else {
+      url.searchParams.delete('route');
+    }
+    window.history.replaceState({}, '', url);
+  }, [routeFilter]);
+
   // Fetch bus locations
   const fetchBusLocations = async () => {
     try {
@@ -289,6 +309,17 @@ const ACTransitMap = () => {
       if (BUS_LOCATIONS_FETCH_COUNT === 1) map.current.fitBounds(bounds, { padding: 50 });
       console.log('Fitted bounds to show all buses');
     }
+  }, [busData, routeFilter]);
+
+  // Calculate filtered bus count
+  const filteredBusCount = React.useMemo(() => {
+    if (!routeFilter.trim()) return busData.length;
+    
+    const features = convertBusDataToFeatures(busData);
+    return features.filter(feature => 
+      feature.properties.routeId && 
+      feature.properties.routeId.includes(routeFilter.trim())
+    ).length;
   }, [busData, routeFilter]);
 
   // Update map with bus history data
@@ -677,13 +708,22 @@ const ACTransitMap = () => {
                 fontSize: '12px',
                 fontWeight: 'bold'
               }}>
-                {busData.length}
+                {filteredBusCount}
               </span>
               buses tracked
             </div>
+            {routeFilter.trim() && (
+              <div style={{ 
+                margin: '2px 0', 
+                color: '#666',
+                fontSize: '11px',
+                fontStyle: 'italic'
+              }}>
+                filtered to {filteredBusCount} of {busData.length} total
+              </div>
+            )}
             <p style={{ margin: '5px 0', color: '#666', fontSize: '12px' }}>
-              🔄 Updates every 30 seconds<br/>
-              📍 Click arrows for details
+              🔄 Updates every 30 seconds
             </p>
           </div>
         )}
