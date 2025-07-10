@@ -53,6 +53,8 @@ const ACTransitMap = () => {
   const [activeStopFilter, setActiveStopFilter] = useState(null);
   const [tripAverageSpeeds, setTripAverageSpeeds] = useState({});
   const tripAverageSpeedsRef = useRef({});
+  const popupRef = useRef(null);
+  const stopPopupRef = useRef(null);
 
   // Initialize route filter from URL query parameter
   useEffect(() => {
@@ -205,6 +207,7 @@ const ACTransitMap = () => {
         id: 'stops-circles',
         type: 'circle',
         source: 'stops',
+        minzoom: 13,
         paint: {
           'circle-radius': 4,
           'circle-color': '#0066cc',
@@ -684,6 +687,12 @@ const ACTransitMap = () => {
       // maxWidth: '300px'
     });
 
+    const stopPopup = new maplibregl.Popup({
+      closeButton: true,
+      closeOnClick: false,
+      // maxWidth: '300px'
+    });
+
     const handleClick = (e) => {
       const features = map.current.queryRenderedFeatures(e.point, {
         layers: ['bus-arrows']
@@ -730,11 +739,7 @@ const ACTransitMap = () => {
         }
 
         // Get pre-calculated average speed
-        console.log('tripAverageSpeeds from ref:', tripAverageSpeedsRef.current);
-        console.log('tripId being looked up:', tripId);
-        console.log('Available tripIds in ref:', Object.keys(tripAverageSpeedsRef.current));
         const historicalAvgMPH = tripAverageSpeedsRef.current[tripId] || null;
-        console.log('historicalAvgMPH found:', historicalAvgMPH);
         const htmlString = `
           <div style="font-family: Arial, sans-serif; font-size: 12px; color: #000">
             <strong>Route: ${routeId}</strong><br/>
@@ -744,12 +749,13 @@ const ACTransitMap = () => {
             ${historicalAvgMPH ? `Avg Speed: ${historicalAvgMPH} mph` : ''}
           </div>`
 
-        popup
+        popupRef.current = popup
           .setLngLat(feature.geometry.coordinates)
           .setHTML(htmlString)
           .addTo(map.current);
       } else {
         popup.remove();
+        popupRef.current = null;
         
         // Hide all history when clicking elsewhere
         const historySource = map.current.getSource('busesHistory');
@@ -904,15 +910,18 @@ const ACTransitMap = () => {
           <div style="font-family: Arial, sans-serif; font-size: 12px; color: #000">
             <strong>Stop ID: ${stpid}</strong><br/>
             ${stpnm ? `Name: ${stpnm}<br/>` : ''}
-            Routes: ${routeNames ? routeNames : 'None'}
+            Routes: ${routeNames ? JSON.parse(routeNames).join(', ') : 'None'}
           </div>`
 
-        popup
+        stopPopupRef.current = stopPopup
           .setLngLat(feature.geometry.coordinates)
           .setHTML(htmlString)
           .addTo(map.current);
       } else {
-        popup.remove();
+        if (stopPopupRef.current) {
+          stopPopupRef.current.remove();
+          stopPopupRef.current = null;
+        }
         setActiveStopFilter(null);
       }
     };
@@ -1085,9 +1094,13 @@ const ACTransitMap = () => {
             setRouteFilter('');
             setActiveStopFilter(null);
             // Clear any active popups
-            if (map.current) {
-              const popups = document.querySelectorAll('.maplibre-popup');
-              popups.forEach(popup => popup.remove());
+            if (popupRef.current) {
+              popupRef.current.remove();
+              popupRef.current = null;
+            }
+            if (stopPopupRef.current) {
+              stopPopupRef.current.remove();
+              stopPopupRef.current = null;
             }
           }}
           style={{
