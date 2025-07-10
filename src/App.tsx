@@ -446,7 +446,7 @@ const ACTransitMap = () => {
 
       if (features.length > 0) {
         const feature = features[0];
-        const { routeId, bearing, tripId } = feature.properties;
+        const { routeId, bearing, tripId, speed } = feature.properties;
 
         // Show history for matching trip IDs
         const historySource = map.current.getSource('busesHistory');
@@ -488,7 +488,8 @@ const ACTransitMap = () => {
           <div style="font-family: Arial, sans-serif; font-size: 12px; color: #000">
             <strong>Route: ${routeId}</strong><br/>
             Trip: ${tripId}<br/>
-            Bearing: ${Math.round(bearing)}°
+            Bearing: ${Math.round(bearing)}°<br/>
+            Speed: ${Math.round(speed)} mph
           </div>`
 
         popup
