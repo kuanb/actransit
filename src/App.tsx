@@ -42,13 +42,17 @@ function convertBusDataToFeatures(busData) {
 }
 
 const ACTransitMap = () => {
-  const mapContainer = useRef();
-  const map = useRef();
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<maplibregl.Map | null>(null);
   const [busData, setBusData] = useState([]);
   const [busHistoryData, setBusHistoryData] = useState([]);
+  const [routeStopPredictions, setRouteStopPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [routeFilter, setRouteFilter] = useState('');
+  const [activeStopFilter, setActiveStopFilter] = useState(null);
+  const [tripAverageSpeeds, setTripAverageSpeeds] = useState({});
+  const tripAverageSpeedsRef = useRef({});
 
   // Initialize route filter from URL query parameter
   useEffect(() => {
@@ -70,6 +74,14 @@ const ACTransitMap = () => {
     window.history.replaceState({}, '', url);
   }, [routeFilter]);
 
+  // Log when tripAverageSpeeds state is updated
+  useEffect(() => {
+    if (Object.keys(tripAverageSpeeds).length > 0) {
+      console.log('tripAverageSpeeds state updated:', tripAverageSpeeds);
+      tripAverageSpeedsRef.current = tripAverageSpeeds;
+    }
+  }, [tripAverageSpeeds]);
+
   // Fetch bus locations
   const fetchBusLocations = async () => {
     try {
@@ -90,7 +102,21 @@ const ACTransitMap = () => {
       }
       const historyData = await historyResponse.json();
       console.log('Bus history data received:', historyData);
+      console.log('History data type:', typeof historyData);
+      console.log('History data length:', historyData ? historyData.length : 'null/undefined');
       setBusHistoryData(historyData);
+
+      // Calculate average speeds for all trips
+      const averageSpeeds = calculateAllTripAverageSpeeds(historyData);
+      console.log('averageSpeeds:', averageSpeeds);
+      console.log('averageSpeeds type:', typeof averageSpeeds);
+      console.log('averageSpeeds keys:', Object.keys(averageSpeeds));
+      console.log('averageSpeeds length:', Object.keys(averageSpeeds).length);
+      setTripAverageSpeeds(averageSpeeds);
+      // Note: tripAverageSpeeds will be empty here due to React's async state updates
+
+      // Fetch route stop predictions
+      await fetchRouteStopPredictions();
 
       setError(null);
     } catch (err) {
@@ -98,6 +124,21 @@ const ACTransitMap = () => {
       console.error('Error fetching bus data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch route stop predictions
+  const fetchRouteStopPredictions = async () => {
+    try {
+      const response = await fetch('https://actransit.val.run/route_stop_predictions');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log('Route stop predictions received:', data);
+      setRouteStopPredictions(data);
+    } catch (err) {
+      console.error('Error fetching route stop predictions:', err);
     }
   };
 
@@ -147,6 +188,29 @@ const ACTransitMap = () => {
         data: {
           type: 'FeatureCollection',
           features: []
+        }
+      });
+
+      // Add source for stops
+      map.current.addSource('stops', {
+        type: 'geojson',
+        data: {
+          type: 'FeatureCollection',
+          features: []
+        }
+      });
+
+      // Add layer for stops
+      map.current.addLayer({
+        id: 'stops-circles',
+        type: 'circle',
+        source: 'stops',
+        paint: {
+          'circle-radius': 4,
+          'circle-color': '#0066cc',
+          'circle-stroke-color': '#ffffff',
+          'circle-stroke-width': 1,
+          'circle-opacity': 0.45
         }
       });
 
@@ -289,6 +353,15 @@ const ACTransitMap = () => {
       console.log('Filtered to', features.length, 'buses matching route filter:', routeFilter);
     }
 
+    // Filter by active stop filter
+    if (activeStopFilter && activeStopFilter.routeNames.length > 0) {
+      features = features.filter(feature => 
+        feature.properties.routeId && 
+        activeStopFilter.routeNames.includes(feature.properties.routeId)
+      );
+      console.log('Filtered to', features.length, 'buses matching stop filter routes:', activeStopFilter.routeNames);
+    }
+
     console.log('Valid features:', features.length);
 
     if (map.current.getSource('buses')) {
@@ -309,7 +382,7 @@ const ACTransitMap = () => {
       if (BUS_LOCATIONS_FETCH_COUNT === 1) map.current.fitBounds(bounds, { padding: 50 });
       console.log('Fitted bounds to show all buses');
     }
-  }, [busData, routeFilter]);
+  }, [busData, routeFilter, activeStopFilter]);
 
   // Calculate filtered bus count
   const filteredBusCount = React.useMemo(() => {
@@ -321,6 +394,127 @@ const ACTransitMap = () => {
       feature.properties.routeId.includes(routeFilter.trim())
     ).length;
   }, [busData, routeFilter]);
+
+  // Calculate historical average MPH for a trip
+  const calculateHistoricalAverageMPH = (tripId) => {
+    console.log('Calculating historical average MPH for tripId:', tripId);
+    console.log('busHistoryData:', busHistoryData);
+    console.log('busHistoryData type:', typeof busHistoryData);
+    console.log('busHistoryData is array:', Array.isArray(busHistoryData));
+    console.log('busHistoryData length:', busHistoryData ? busHistoryData.length : 'null/undefined');
+    
+    if (!busHistoryData || !busHistoryData.length) {
+      console.log('busHistoryData is empty or null');
+      return null;
+    }
+    
+    const speeds = [];
+    busHistoryData.forEach((historyEntry, index) => {
+      console.log(`History entry ${index}:`, historyEntry);
+      console.log(`History entry ${index} type:`, typeof historyEntry);
+      console.log(`History entry ${index} is array:`, Array.isArray(historyEntry));
+      
+      if (Array.isArray(historyEntry)) {
+        historyEntry.forEach(bus => {
+          if (bus.vehicle?.trip?.tripId === tripId && bus.vehicle?.position?.speed) {
+            speeds.push(bus.vehicle.position.speed);
+          }
+        });
+      }
+    });
+    
+    console.log('Collected speeds:', speeds);
+    
+    if (speeds.length === 0) {
+      console.log('No speeds found for tripId:', tripId);
+      return null;
+    }
+    
+    const averageSpeed = speeds.reduce((sum, speed) => sum + speed, 0) / speeds.length;
+    const roundedAverage = Math.round(averageSpeed);
+    console.log('Average speed:', roundedAverage);
+    return roundedAverage;
+  };
+
+  // Calculate average speeds for all trips during data ingestion
+  const calculateAllTripAverageSpeeds = (historyData) => {
+    console.log('calculateAllTripAverageSpeeds called with historyData length:', historyData ? historyData.length : 'null');
+    
+    if (!historyData || !historyData.length) {
+      console.log('historyData is empty or null, returning empty object');
+      return {};
+    }
+    
+    const tripSpeeds = {};
+    let totalBusesProcessed = 0;
+    let totalSpeedsFound = 0;
+    
+    historyData.forEach((historyEntry, index) => {
+      if (Array.isArray(historyEntry)) {
+        historyEntry.forEach((bus, busIndex) => {
+          totalBusesProcessed++;
+          const tripId = bus.vehicle?.trip?.tripId;
+          const speed = bus.vehicle?.position?.speed;
+          
+          if (tripId && speed !== undefined) {
+            if (!tripSpeeds[tripId]) {
+              tripSpeeds[tripId] = [];
+            }
+            tripSpeeds[tripId].push(Math.round(speed, 2));
+            totalSpeedsFound++;
+          }
+        });
+      }
+    });
+    
+    console.log('Total buses processed:', totalBusesProcessed);
+    console.log('Total speeds found:', totalSpeedsFound);
+    console.log('Unique trip IDs found:', Object.keys(tripSpeeds).length);
+    
+    // Calculate averages
+    const averageSpeeds = {};
+    Object.keys(tripSpeeds).forEach(tripId => {
+      const speeds = tripSpeeds[tripId];
+      const average = Math.round(speeds.reduce((sum, speed) => sum + speed, 0) / speeds.length);
+      averageSpeeds[tripId] = average;
+    });
+    
+    console.log('Calculated average speeds for', Object.keys(averageSpeeds).length, 'trips');
+    return averageSpeeds;
+  };
+
+  // Extract unique stops from route stop predictions
+  const uniqueStops = React.useMemo(() => {
+    if (!routeStopPredictions.length) return [];
+    
+    const stopMap = new Map();
+    
+    routeStopPredictions.forEach(route => {
+      if (route.processedStops && route.processedStops['bustime-response'] && route.processedStops['bustime-response'].stops) {
+        route.processedStops['bustime-response'].stops.forEach(stop => {
+          if (stop.stpid && stop.lat && stop.lon) {
+            if (!stopMap.has(stop.stpid)) {
+              stopMap.set(stop.stpid, {
+                stpid: stop.stpid,
+                stpnm: stop.stpnm,
+                lat: stop.lat,
+                lon: stop.lon,
+                geoid: stop.geoid,
+                routeNames: []
+              });
+            }
+            // Add route name to the stop's route list if not already present
+            const stopData = stopMap.get(stop.stpid);
+            if (!stopData.routeNames.includes(route.routeName)) {
+              stopData.routeNames.push(route.routeName);
+            }
+          }
+        });
+      }
+    });
+    
+    return Array.from(stopMap.values());
+  }, [routeStopPredictions]);
 
   // Update map with bus history data
   useEffect(() => {
@@ -423,6 +617,57 @@ const ACTransitMap = () => {
     }
   }, [busHistoryData, busData]); // Changed dependency from busData to busHistoryData
 
+  // Update map with stops data
+  useEffect(() => {
+    if (!map.current || !uniqueStops.length) return;
+
+    console.log('Processing stops data:', uniqueStops.length, 'unique stops');
+
+    let stopFeatures = uniqueStops.map(stop => ({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [stop.lon, stop.lat]
+      },
+      properties: {
+        stpid: stop.stpid,
+        stpnm: stop.stpnm,
+        geoid: stop.geoid,
+        routeNames: stop.routeNames
+      }
+    }));
+
+    // Filter stops by active stop filter
+    if (activeStopFilter && activeStopFilter.routeNames.length > 0) {
+      stopFeatures = stopFeatures.filter(feature => {
+        const stopRouteNames = feature.properties.routeNames || [];
+        return stopRouteNames.some(routeName => 
+          activeStopFilter.routeNames.includes(routeName)
+        );
+      });
+      console.log('Filtered to', stopFeatures.length, 'stops matching stop filter routes:', activeStopFilter.routeNames);
+    }
+
+    // Filter stops by route text filter
+    if (routeFilter.trim()) {
+      stopFeatures = stopFeatures.filter(feature => {
+        const stopRouteNames = feature.properties.routeNames || [];
+        return stopRouteNames.some(routeName => 
+          routeName.includes(routeFilter.trim())
+        );
+      });
+      console.log('Filtered to', stopFeatures.length, 'stops matching route text filter:', routeFilter);
+    }
+
+    if (map.current.getSource('stops')) {
+      map.current.getSource('stops').setData({
+        type: 'FeatureCollection',
+        features: stopFeatures
+      });
+      console.log('Updated map with stop features');
+    }
+  }, [uniqueStops, activeStopFilter, routeFilter]);
+
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(fetchBusLocations, 30000);
@@ -484,12 +729,19 @@ const ACTransitMap = () => {
           });
         }
 
+        // Get pre-calculated average speed
+        console.log('tripAverageSpeeds from ref:', tripAverageSpeedsRef.current);
+        console.log('tripId being looked up:', tripId);
+        console.log('Available tripIds in ref:', Object.keys(tripAverageSpeedsRef.current));
+        const historicalAvgMPH = tripAverageSpeedsRef.current[tripId] || null;
+        console.log('historicalAvgMPH found:', historicalAvgMPH);
         const htmlString = `
           <div style="font-family: Arial, sans-serif; font-size: 12px; color: #000">
             <strong>Route: ${routeId}</strong><br/>
             Trip: ${tripId}<br/>
             Bearing: ${Math.round(bearing)}°<br/>
-            Speed: ${Math.round(speed)} mph
+            Speed: ${Math.round(speed)} mph<br/>
+            ${historicalAvgMPH ? `Avg Speed: ${historicalAvgMPH} mph` : ''}
           </div>`
 
         popup
@@ -586,6 +838,8 @@ const ACTransitMap = () => {
 
     const handleMouseLeave = () => {
       // Hide all history when mouse leaves
+
+      // Hide history for busesHistory
       const historySource = map.current.getSource('busesHistory');
       if (historySource) {
         const currentData = historySource._data;
@@ -596,14 +850,14 @@ const ACTransitMap = () => {
             'show-history': false
           }
         }));
-        
+
         historySource.setData({
           type: 'FeatureCollection',
           features: updatedFeatures
         });
       }
 
-      // Hide all history lines when mouse leaves
+      // Hide history for busesHistoryLines
       const historyLinesSource = map.current.getSource('busesHistoryLines');
       if (historyLinesSource) {
         const currentLineData = historyLinesSource._data;
@@ -614,7 +868,7 @@ const ACTransitMap = () => {
             'show-history': false
           }
         }));
-        
+
         historyLinesSource.setData({
           type: 'FeatureCollection',
           features: updatedLineFeatures
@@ -629,11 +883,51 @@ const ACTransitMap = () => {
       map.current.getCanvas().style.cursor = 'pointer';
     });
 
+    // Add click handler for stops
+    const handleStopClick = (e) => {
+      const features = map.current.queryRenderedFeatures(e.point, {
+        layers: ['stops-circles']
+      });
+
+      if (features.length > 0) {
+        const feature = features[0];
+        const { stpid, stpnm, routeNames } = feature.properties;
+        console.log('Route names:', routeNames);
+
+        // Set active stop filter
+        setActiveStopFilter({
+          stpid,
+          routeNames: routeNames || []
+        });
+
+        const htmlString = `
+          <div style="font-family: Arial, sans-serif; font-size: 12px; color: #000">
+            <strong>Stop ID: ${stpid}</strong><br/>
+            ${stpnm ? `Name: ${stpnm}<br/>` : ''}
+            Routes: ${routeNames ? routeNames : 'None'}
+          </div>`
+
+        popup
+          .setLngLat(feature.geometry.coordinates)
+          .setHTML(htmlString)
+          .addTo(map.current);
+      } else {
+        popup.remove();
+        setActiveStopFilter(null);
+      }
+    };
+
+    map.current.on('click', 'stops-circles', handleStopClick);
+    map.current.on('mouseenter', 'stops-circles', () => {
+      map.current.getCanvas().style.cursor = 'pointer';
+    });
+
     return () => {
       if (map.current) {
         map.current.off('click', 'bus-arrows', handleClick);
         map.current.off('mouseenter', 'bus-arrows', handleMouseEnter);
         map.current.off('mouseleave', 'bus-arrows', handleMouseLeave);
+        map.current.off('click', 'stops-circles', handleStopClick);
       }
     };
   }, []);
@@ -783,6 +1077,34 @@ const ACTransitMap = () => {
           }}
         >
           {loading ? '🔄 Refreshing...' : '🔄 Refresh Now'}
+        </button>
+
+        {/* Show All Button */}
+        <button
+          onClick={() => {
+            setRouteFilter('');
+            setActiveStopFilter(null);
+            // Clear any active popups
+            if (map.current) {
+              const popups = document.querySelectorAll('.maplibre-popup');
+              popups.forEach(popup => popup.remove());
+            }
+          }}
+          style={{
+            marginTop: '8px',
+            padding: '8px 12px',
+            background: 'linear-gradient(135deg, #28a745, #20c997)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '6px',
+            cursor: 'pointer',
+            fontSize: '11px',
+            fontWeight: 'bold',
+            transition: 'all 0.2s',
+            width: '100%'
+          }}
+        >
+          🌐 Show All
         </button>
       </div>
 
