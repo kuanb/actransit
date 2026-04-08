@@ -1188,7 +1188,7 @@ const ACTransitMap = () => {
         </button>
       </div>
 
-      {/* Cached vehicle position time range (Pacific); min (oldest) on top */}
+      {/* Cached vehicle position time range (Pacific); older on top */}
       <div style={{
         position: 'absolute',
         bottom: '20px',
@@ -1213,11 +1213,11 @@ const ACTransitMap = () => {
         {vehicleTimestampDisplay ? (
           <div style={{ color: '#444', lineHeight: 1.55 }}>
             <div>
-              <span style={{ color: '#666' }}>Min (oldest):</span>{' '}
+              <span style={{ color: '#666' }}>Older:</span>{' '}
               {vehicleTimestampDisplay.min}
             </div>
             <div style={{ marginTop: '6px' }}>
-              <span style={{ color: '#666' }}>Max (newest):</span>{' '}
+              <span style={{ color: '#666' }}>Newest:</span>{' '}
               {vehicleTimestampDisplay.max}
             </div>
           </div>
