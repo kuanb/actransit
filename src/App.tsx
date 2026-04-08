@@ -41,6 +41,35 @@ function convertBusDataToFeatures(busData) {
   });
 }
 
+/** GTFS/JSON feeds often send timestamps as strings */
+function parseVehicleUnixTimestamp(t: unknown): number | null {
+  if (typeof t === 'number' && Number.isFinite(t)) return t;
+  if (typeof t === 'string' && t.trim() !== '') {
+    const n = Number(t);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
+}
+
+/** unixSeconds from vehicle feed; shown in Pacific time with age in minutes */
+function formatPstWithMinutesOld(unixSeconds: number) {
+  const ms = unixSeconds * 1000;
+  const date = new Date(ms);
+  const pst = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Los_Angeles',
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+    timeZoneName: 'short'
+  }).format(date);
+  const minutesOld = Math.max(0, Math.round((Date.now() - ms) / 60000));
+  return `${pst} (${minutesOld} min ago)`;
+}
+
 const ACTransitMap = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -55,6 +84,13 @@ const ACTransitMap = () => {
   const tripAverageSpeedsRef = useRef({});
   const popupRef = useRef(null);
   const stopPopupRef = useRef(null);
+  const [cacheAgeTick, setCacheAgeTick] = useState(0);
+
+  // Re-render periodically so "min ago" stays accurate
+  useEffect(() => {
+    const id = window.setInterval(() => setCacheAgeTick((n) => n + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
 
   // Initialize route filter from URL query parameter
   useEffect(() => {
@@ -397,6 +433,25 @@ const ACTransitMap = () => {
       feature.properties.routeId.includes(routeFilter.trim())
     ).length;
   }, [busData, routeFilter]);
+
+  const vehicleTimestampBounds = React.useMemo(() => {
+    if (!Array.isArray(busData) || busData.length === 0) return null;
+    const timestamps: number[] = [];
+    for (const row of busData) {
+      const t = parseVehicleUnixTimestamp(row?.vehicle?.timestamp);
+      if (t !== null) timestamps.push(t);
+    }
+    if (timestamps.length === 0) return null;
+    return { min: Math.min(...timestamps), max: Math.max(...timestamps) };
+  }, [busData]);
+
+  const vehicleTimestampDisplay = React.useMemo(() => {
+    if (!vehicleTimestampBounds) return null;
+    return {
+      min: formatPstWithMinutesOld(vehicleTimestampBounds.min),
+      max: formatPstWithMinutesOld(vehicleTimestampBounds.max)
+    };
+  }, [vehicleTimestampBounds, cacheAgeTick]);
 
   // Calculate historical average MPH for a trip
   const calculateHistoricalAverageMPH = (tripId) => {
