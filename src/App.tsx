@@ -1176,6 +1176,44 @@ const ACTransitMap = () => {
         </button>
       </div>
 
+      {/* Cached vehicle position time range (Pacific); min (oldest) on top */}
+      <div style={{
+        position: 'absolute',
+        bottom: '20px',
+        right: '20px',
+        background: 'rgba(255, 255, 255, 0.95)',
+        padding: '12px 14px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '12px',
+        maxWidth: '340px',
+        zIndex: 1000
+      }}>
+        <div style={{
+          fontWeight: 'bold',
+          color: '#333',
+          marginBottom: '8px',
+          fontSize: '13px'
+        }}>
+          Cached vehicle positions
+        </div>
+        {vehicleTimestampDisplay ? (
+          <div style={{ color: '#444', lineHeight: 1.55 }}>
+            <div>
+              <span style={{ color: '#666' }}>Min (oldest):</span>{' '}
+              {vehicleTimestampDisplay.min}
+            </div>
+            <div style={{ marginTop: '6px' }}>
+              <span style={{ color: '#666' }}>Max (newest):</span>{' '}
+              {vehicleTimestampDisplay.max}
+            </div>
+          </div>
+        ) : (
+          <div style={{ color: '#888' }}>No timestamps yet</div>
+        )}
+      </div>
+
       {/* CSS for animations */}
       <style>{`
         @keyframes spin {
