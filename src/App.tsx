@@ -51,6 +51,16 @@ function parseVehicleUnixTimestamp(t: unknown): number | null {
   return null;
 }
 
+/** e.g. "5 min, 23 secs" for how old position data is */
+function formatDataAgeMinutesSeconds(ts: unknown): string | null {
+  const unix = parseVehicleUnixTimestamp(ts);
+  if (unix === null) return null;
+  const diffSec = Math.max(0, Date.now() / 1000 - unix);
+  const minutes = Math.floor(diffSec / 60);
+  const seconds = Math.floor(diffSec % 60);
+  return `${minutes} min, ${seconds} secs`;
+}
+
 /** unixSeconds from vehicle feed; shown in Pacific time with age in minutes */
 function formatPstWithMinutesOld(unixSeconds: number) {
   const ms = unixSeconds * 1000;
@@ -755,7 +765,8 @@ const ACTransitMap = () => {
 
       if (features.length > 0) {
         const feature = features[0];
-        const { routeId, bearing, tripId, speed } = feature.properties;
+        const { routeId, bearing, tripId, speed, timestamp } = feature.properties;
+        const dataAge = formatDataAgeMinutesSeconds(timestamp);
 
         // Show history for matching trip IDs
         const historySource = map.current.getSource('busesHistory');
@@ -801,6 +812,7 @@ const ACTransitMap = () => {
             Trip: ${tripId}<br/>
             Bearing: ${Math.round(bearing)}°<br/>
             Speed: ${Math.round(speed)} mph<br/>
+            ${dataAge !== null ? `Data age: ${dataAge} old<br/>` : ''}
             ${historicalAvgMPH ? `Avg Speed: ${historicalAvgMPH} mph` : ''}
           </div>`
 
