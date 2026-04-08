@@ -8,6 +8,10 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+
+# Local Val.run / one-off API scripts (not used by the web build)
+valscripts/
+
 dist
 dist-ssr
 *.local
