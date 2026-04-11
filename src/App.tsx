@@ -189,6 +189,7 @@ const ACTransitMap = () => {
   const [routeInfo, setRouteInfo] = useState<{ count: number; vintage: string } | null>(null);
   const [routeNames, setRouteNames] = useState<string[]>([]);
   const [showRoutePicker, setShowRoutePicker] = useState(false);
+  const [cacheMinimized, setCacheMinimized] = useState(false);
   const routeGeometriesRef = useRef<Record<string, Coord[][]>>({});
   const routeFilterRef = useRef('');
   const shouldZoomOnFilterChange = useRef(false);
@@ -634,7 +635,8 @@ const ACTransitMap = () => {
     if (!vehicleTimestampBounds) return null;
     return {
       min: formatPstWithMinutesOld(vehicleTimestampBounds.min),
-      max: formatPstWithMinutesOld(vehicleTimestampBounds.max)
+      max: formatPstWithMinutesOld(vehicleTimestampBounds.max),
+      newestMinutesOld: Math.max(0, Math.round((Date.now() - vehicleTimestampBounds.max * 1000) / 60000)),
     };
   }, [vehicleTimestampBounds, cacheAgeTick]);
 
@@ -1475,41 +1477,78 @@ const ACTransitMap = () => {
       </div>
 
       {/* Cache age panel */}
-      <div style={{ ...panelBase, bottom: '16px', right: '16px', padding: '12px 14px', maxWidth: '320px', fontSize: '12px' }}>
-        <div style={{ fontWeight: 600, fontSize: '12px', color: '#555', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-          Vehicle cache
-        </div>
-        {vehicleTimestampDisplay ? (
-          <div style={{ color: '#444', lineHeight: 1.6 }}>
-            <div><span style={{ color: '#888' }}>Oldest:</span> {vehicleTimestampDisplay.min}</div>
-            <div><span style={{ color: '#888' }}>Newest:</span> {vehicleTimestampDisplay.max}</div>
+      <div style={{
+        ...panelBase,
+        bottom: '16px',
+        right: '16px',
+        padding: '12px 14px',
+        maxWidth: 'min(320px, calc(100vw - 32px))',
+        maxHeight: 'calc(100vh - 32px)',
+        overflowY: 'auto',
+        boxSizing: 'border-box',
+        fontSize: '12px',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: cacheMinimized ? 0 : '6px' }}>
+          <div style={{ fontWeight: 600, fontSize: '12px', color: '#555', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            {cacheMinimized
+              ? (vehicleTimestampDisplay
+                ? `Data is ${vehicleTimestampDisplay.newestMinutesOld} min old`
+                : 'Loading...')
+              : 'Vehicle cache'}
           </div>
-        ) : (
-          <div style={{ color: '#999' }}>Waiting for data...</div>
-        )}
+          <button
+            onClick={() => setCacheMinimized(v => !v)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#999',
+              cursor: 'pointer',
+              fontSize: '15px',
+              lineHeight: 1,
+              padding: '0 0 0 8px',
+              fontFamily: panelFont,
+            }}
+            title={cacheMinimized ? 'Expand' : 'Minimize'}
+          >
+            {cacheMinimized ? '+' : '\u2013'}
+          </button>
+        </div>
 
-        {routeInfo && (
+        {!cacheMinimized && (
           <>
+            {vehicleTimestampDisplay ? (
+              <div style={{ color: '#444', lineHeight: 1.6 }}>
+                <div><span style={{ color: '#888' }}>Oldest:</span> {vehicleTimestampDisplay.min}</div>
+                <div><span style={{ color: '#888' }}>Newest:</span> {vehicleTimestampDisplay.max}</div>
+              </div>
+            ) : (
+              <div style={{ color: '#999' }}>Waiting for data...</div>
+            )}
+
+            {routeInfo && (
+              <>
+                <div style={{ borderTop: '1px solid #e5e5e5', margin: '8px 0' }} />
+                <div style={{ fontWeight: 600, fontSize: '12px', color: '#555', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Route lines
+                </div>
+                <div style={{ color: '#444', lineHeight: 1.6 }}>
+                  <div><span style={{ color: '#888' }}>Routes:</span> {routeInfo.count}</div>
+                  <div><span style={{ color: '#888' }}>Feed:</span> {routeInfo.vintage}</div>
+                </div>
+              </>
+            )}
+
             <div style={{ borderTop: '1px solid #e5e5e5', margin: '8px 0' }} />
-            <div style={{ fontWeight: 600, fontSize: '12px', color: '#555', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Route lines
-            </div>
-            <div style={{ color: '#444', lineHeight: 1.6 }}>
-              <div><span style={{ color: '#888' }}>Routes:</span> {routeInfo.count}</div>
-              <div><span style={{ color: '#888' }}>Feed:</span> {routeInfo.vintage}</div>
-            </div>
+            <a
+              href="https://kuanbutts.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#aaa', fontSize: '11px', textDecoration: 'none' }}
+            >
+              Made in Oakland, CA by Kuan
+            </a>
           </>
         )}
-
-        <div style={{ borderTop: '1px solid #e5e5e5', margin: '8px 0' }} />
-        <a
-          href="https://kuanbutts.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: '#aaa', fontSize: '11px', textDecoration: 'none' }}
-        >
-          Made in Oakland, CA by Kuan
-        </a>
       </div>
 
       {/* Route picker modal */}
