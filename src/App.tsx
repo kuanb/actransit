@@ -204,7 +204,7 @@ const ACTransitMap = () => {
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: 'https://api.maptiler.com/maps/streets/style.json?key=smyKrds9C01IazzvU1Tr',
+      style: 'https://api.maptiler.com/maps/streets-v2-light/style.json?key=smyKrds9C01IazzvU1Tr',
       center: [-122.2681, 37.8044], // Oakland, CA center
       zoom: 10
     });
