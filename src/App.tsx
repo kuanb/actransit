@@ -4,6 +4,98 @@ import maplibregl from 'maplibre-gl';
 let BUS_LOCATIONS_FETCH_COUNT = 0;
 const MAX_MINUTES_AGO = 8;
 
+type Coord = [number, number];
+
+function sqDist(a: Coord, b: Coord): number {
+  const dx = a[0] - b[0], dy = a[1] - b[1];
+  return dx * dx + dy * dy;
+}
+
+function segmentLength(a: Coord, b: Coord): number {
+  return Math.sqrt(sqDist(a, b));
+}
+
+/** Cumulative distances along a polyline, starting at 0. */
+function cumulativeDistances(coords: Coord[]): number[] {
+  const d = [0];
+  for (let i = 1; i < coords.length; i++) {
+    d.push(d[i - 1] + segmentLength(coords[i - 1], coords[i]));
+  }
+  return d;
+}
+
+/** Project a point onto a polyline; return the distance along the line. */
+function projectOnLine(pt: Coord, coords: Coord[], cumDist: number[]): number {
+  let bestDist = Infinity;
+  let bestAlong = 0;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const a = coords[i], b = coords[i + 1];
+    const abx = b[0] - a[0], aby = b[1] - a[1];
+    const len2 = abx * abx + aby * aby;
+    let t = len2 === 0 ? 0 : ((pt[0] - a[0]) * abx + (pt[1] - a[1]) * aby) / len2;
+    t = Math.max(0, Math.min(1, t));
+    const px = a[0] + t * abx, py = a[1] + t * aby;
+    const d = sqDist(pt, [px, py]);
+    if (d < bestDist) {
+      bestDist = d;
+      bestAlong = cumDist[i] + t * (cumDist[i + 1] - cumDist[i]);
+    }
+  }
+  return bestAlong;
+}
+
+/** Extract a substring of a polyline between two distances. */
+function lineSubstring(coords: Coord[], cumDist: number[], startD: number, endD: number): Coord[] {
+  if (startD > endD) [startD, endD] = [endD, startD];
+  const totalLen = cumDist[cumDist.length - 1];
+  startD = Math.max(0, startD);
+  endD = Math.min(totalLen, endD);
+  const result: Coord[] = [];
+
+  for (let i = 0; i < coords.length - 1; i++) {
+    const d0 = cumDist[i], d1 = cumDist[i + 1];
+    if (d1 < startD) continue;
+    if (d0 > endD) break;
+
+    if (d0 <= startD && startD <= d1) {
+      const t = d1 === d0 ? 0 : (startD - d0) / (d1 - d0);
+      result.push([
+        coords[i][0] + t * (coords[i + 1][0] - coords[i][0]),
+        coords[i][1] + t * (coords[i + 1][1] - coords[i][1]),
+      ]);
+    }
+
+    if (d0 >= startD && d0 <= endD) {
+      if (result.length === 0 || sqDist(result[result.length - 1], coords[i]) > 0) {
+        result.push(coords[i]);
+      }
+    }
+
+    if (d0 <= endD && endD <= d1) {
+      const t = d1 === d0 ? 0 : (endD - d0) / (d1 - d0);
+      result.push([
+        coords[i][0] + t * (coords[i + 1][0] - coords[i][0]),
+        coords[i][1] + t * (coords[i + 1][1] - coords[i][1]),
+      ]);
+    }
+  }
+  return result;
+}
+
+/** Snap historical pings to a route geometry, returning the covered substring. */
+function snapToRoute(
+  pingCoords: Coord[],
+  routeCoords: Coord[],
+): Coord[] | null {
+  if (routeCoords.length < 2 || pingCoords.length < 1) return null;
+  const cumDist = cumulativeDistances(routeCoords);
+  const projections = pingCoords.map(pt => projectOnLine(pt, routeCoords, cumDist));
+  const minD = Math.min(...projections);
+  const maxD = Math.max(...projections);
+  const sub = lineSubstring(routeCoords, cumDist, minD, maxD);
+  return sub.length >= 2 ? sub : null;
+}
+
 function convertBusDataToFeatures(busData) {
   return busData.filter(ea => ea.vehicle.trip).map((bus, index) => {
     const lat = bus.vehicle.position.latitude;
@@ -97,6 +189,7 @@ const ACTransitMap = () => {
   const [routeInfo, setRouteInfo] = useState<{ count: number; vintage: string } | null>(null);
   const [routeNames, setRouteNames] = useState<string[]>([]);
   const [showRoutePicker, setShowRoutePicker] = useState(false);
+  const routeGeometriesRef = useRef<Record<string, Coord[]>>({});
   const prevRouteFilterRef = useRef('');
 
   // Re-render periodically so "min ago" stays accurate
@@ -443,6 +536,15 @@ const ACTransitMap = () => {
             (geojson.features ?? []).map((f: any) => f.properties?.route_short_name).filter(Boolean)
           ));
           setRouteNames(names);
+
+          const geoMap: Record<string, Coord[]> = {};
+          for (const feat of geojson.features ?? []) {
+            const rid = feat.properties?.route_short_name || feat.properties?.route_id;
+            if (rid && feat.geometry?.coordinates) {
+              geoMap[rid] = feat.geometry.coordinates;
+            }
+          }
+          routeGeometriesRef.current = geoMap;
         })
         .catch(err => console.warn('Failed to load route geometries:', err));
     });
@@ -703,25 +805,27 @@ const ACTransitMap = () => {
     const lineFeatures = Object.values(tripGroups)
       .filter(points => points.length > 1)
       .map(points => {
-        // Sort points by timestamp
         const sortedPoints = points.sort((a, b) => a.properties.timestamp - b.properties.timestamp);
         const tripId = sortedPoints[0].properties.tripId;
-        
-        // Add current bus location if it exists
-        let allCoordinates = sortedPoints.map(point => point.geometry.coordinates);
+        const routeId = sortedPoints[0].properties.routeId;
+
+        let allCoordinates: Coord[] = sortedPoints.map(point => point.geometry.coordinates);
         if (currentBusMap[tripId]) {
           allCoordinates.push(currentBusMap[tripId].geometry.coordinates);
         }
-        
+
+        const routeLine = routeGeometriesRef.current[routeId];
+        const snapped = routeLine ? snapToRoute(allCoordinates, routeLine) : null;
+
         return {
           type: 'Feature',
           geometry: {
             type: 'LineString',
-            coordinates: allCoordinates
+            coordinates: snapped || allCoordinates,
           },
           properties: {
             tripId: tripId,
-            routeId: sortedPoints[0].properties.routeId,
+            routeId: routeId,
             'show-history': false
           }
         };
