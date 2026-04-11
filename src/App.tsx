@@ -189,7 +189,7 @@ const ACTransitMap = () => {
   const [routeInfo, setRouteInfo] = useState<{ count: number; vintage: string } | null>(null);
   const [routeNames, setRouteNames] = useState<string[]>([]);
   const [showRoutePicker, setShowRoutePicker] = useState(false);
-  const routeGeometriesRef = useRef<Record<string, Coord[]>>({});
+  const routeGeometriesRef = useRef<Record<string, Coord[][]>>({});
   const prevRouteFilterRef = useRef('');
 
   // Re-render periodically so "min ago" stays accurate
@@ -479,12 +479,12 @@ const ACTransitMap = () => {
           'line-cap': 'round'
         },
         paint: {
-          'line-color': '#ff6666',
-          'line-width': 2,
+          'line-color': '#ff4444',
+          'line-width': 8,
           'line-opacity': [
             'case',
             ['==', ['get', 'show-history'], true],
-            0.4,
+            0.6,
             0
           ]
         }
@@ -537,11 +537,12 @@ const ACTransitMap = () => {
           ));
           setRouteNames(names);
 
-          const geoMap: Record<string, Coord[]> = {};
+          const geoMap: Record<string, Coord[][]> = {};
           for (const feat of geojson.features ?? []) {
             const rid = feat.properties?.route_short_name || feat.properties?.route_id;
             if (rid && feat.geometry?.coordinates) {
-              geoMap[rid] = feat.geometry.coordinates;
+              if (!geoMap[rid]) geoMap[rid] = [];
+              geoMap[rid].push(feat.geometry.coordinates);
             }
           }
           routeGeometriesRef.current = geoMap;
@@ -814,8 +815,32 @@ const ACTransitMap = () => {
           allCoordinates.push(currentBusMap[tripId].geometry.coordinates);
         }
 
-        const routeLine = routeGeometriesRef.current[routeId];
-        const snapped = routeLine ? snapToRoute(allCoordinates, routeLine) : null;
+        const routeLines = routeGeometriesRef.current[routeId] ?? [];
+        let snapped: Coord[] | null = null;
+        if (routeLines.length > 0) {
+          let bestFit: Coord[] | null = null;
+          let bestScore = Infinity;
+          for (const rl of routeLines) {
+            const candidate = snapToRoute(allCoordinates, rl);
+            if (!candidate) continue;
+            const cumDist = cumulativeDistances(rl);
+            let totalDist = 0;
+            for (const pt of allCoordinates) {
+              const along = projectOnLine(pt, rl, cumDist);
+              const idx = cumDist.findIndex(d => d >= along);
+              const i = Math.max(0, idx - 1);
+              const t = cumDist[i + 1] === cumDist[i] ? 0 : (along - cumDist[i]) / (cumDist[i + 1] - cumDist[i]);
+              const px = rl[i][0] + t * (rl[i + 1][0] - rl[i][0]);
+              const py = rl[i][1] + t * (rl[i + 1][1] - rl[i][1]);
+              totalDist += sqDist(pt, [px, py]);
+            }
+            if (totalDist < bestScore) {
+              bestScore = totalDist;
+              bestFit = candidate;
+            }
+          }
+          snapped = bestFit;
+        }
 
         return {
           type: 'Feature',

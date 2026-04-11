@@ -94,23 +94,20 @@ def build_geojson(zf: zipfile.ZipFile, vintage: str, start_fmt: str, end_fmt: st
     for r in routes_rows:
         route_meta[r["route_id"]] = r
 
-    route_shapes: dict[str, set[str]] = defaultdict(set)
+    # route_id -> direction_id -> set of shape_ids
+    route_dir_shapes: dict[str, dict[str, set[str]]] = defaultdict(lambda: defaultdict(set))
     for t in trips_rows:
         sid = t.get("shape_id", "")
         rid = t.get("route_id", "")
+        did = t.get("direction_id", "0")
         if sid and rid:
-            route_shapes[rid].add(sid)
+            route_dir_shapes[rid][did].add(sid)
 
     features = []
     for route_id in sorted(route_meta):
-        sids = route_shapes.get(route_id)
-        if not sids:
+        dir_shapes = route_dir_shapes.get(route_id, {})
+        if not dir_shapes:
             continue
-        best_sid = max(sids, key=lambda s: len(shapes.get(s, [])))
-        pts = shapes.get(best_sid, [])
-        if len(pts) < 2:
-            continue
-        coords = [[lon, lat] for _, lon, lat in pts]
 
         meta = route_meta[route_id]
         props = {
@@ -121,11 +118,19 @@ def build_geojson(zf: zipfile.ZipFile, vintage: str, start_fmt: str, end_fmt: st
             "route_type": meta.get("route_type", ""),
             "agency_id": meta.get("agency_id", ""),
         }
-        features.append({
-            "type": "Feature",
-            "geometry": {"type": "LineString", "coordinates": coords},
-            "properties": props,
-        })
+
+        for direction_id in sorted(dir_shapes):
+            sids = dir_shapes[direction_id]
+            best_sid = max(sids, key=lambda s: len(shapes.get(s, [])))
+            pts = shapes.get(best_sid, [])
+            if len(pts) < 2:
+                continue
+            coords = [[lon, lat] for _, lon, lat in pts]
+            features.append({
+                "type": "Feature",
+                "geometry": {"type": "LineString", "coordinates": coords},
+                "properties": {**props, "direction_id": direction_id},
+            })
 
     return {
         "type": "FeatureCollection",
