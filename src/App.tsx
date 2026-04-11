@@ -1213,12 +1213,46 @@ const ACTransitMap = () => {
       map.current.getCanvas().style.cursor = 'pointer';
     });
 
+    const routePopup = new maplibregl.Popup({ closeButton: true, closeOnClick: true });
+
+    const handleRouteLineClick = (e) => {
+      if (!e.features?.length) return;
+      const feat = e.features[0];
+      const props = feat.properties || {};
+      const rows = [
+        ['Route', props.route_short_name || props.route_id],
+        ['Name', props.route_long_name],
+        ['Route ID', props.route_id],
+        ['Direction', props.direction_id ?? 'n/a'],
+        ['Type', props.route_type],
+        ['Agency', props.agency_id],
+        ['Color', props.route_color ? `#${props.route_color}` : ''],
+      ].filter(([, v]) => v !== undefined && v !== '');
+
+      const html = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 13px; color: #1a1a1a; line-height: 1.6">
+          <div style="font-weight: 600; font-size: 15px; margin-bottom: 6px">Route ${props.route_short_name || props.route_id}</div>
+          ${rows.map(([k, v]) => `<div><span style="color: #888">${k}:</span> ${v}</div>`).join('')}
+        </div>`;
+
+      routePopup.setLngLat(e.lngLat).setHTML(html).addTo(map.current);
+    };
+
+    map.current.on('click', 'route-lines', handleRouteLineClick);
+    map.current.on('mouseenter', 'route-lines', () => {
+      map.current.getCanvas().style.cursor = 'pointer';
+    });
+    map.current.on('mouseleave', 'route-lines', () => {
+      map.current.getCanvas().style.cursor = '';
+    });
+
     return () => {
       if (map.current) {
         map.current.off('click', 'bus-arrows', handleClick);
         map.current.off('mouseenter', 'bus-arrows', handleMouseEnter);
         map.current.off('mouseleave', 'bus-arrows', handleMouseLeave);
         map.current.off('click', 'stops-circles', handleStopClick);
+        map.current.off('click', 'route-lines', handleRouteLineClick);
       }
     };
   }, []);
