@@ -290,7 +290,25 @@ const ACTransitMap = () => {
         }
       });
 
-      // Add layer for bus arrows
+      // Shadow halo beneath bus icons
+      map.current.addLayer({
+        id: 'bus-shadows',
+        type: 'circle',
+        source: 'buses',
+        paint: {
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            8, 3,
+            12, 6,
+            15, 10,
+            18, 14,
+          ],
+          'circle-color': '#000',
+          'circle-opacity': 0.25,
+          'circle-blur': 0.8,
+        },
+      });
+
       map.current.addLayer({
         id: 'bus-arrows',
         type: 'symbol',
@@ -301,12 +319,12 @@ const ACTransitMap = () => {
             'interpolate',
             ['linear'],
             ['zoom'],
-            8, 0.1,    // At zoom 8, size = 0.3
-            10, 0.2,   // At zoom 10, size = 0.5
-            12, 0.4,   // At zoom 12, size = 0.8
-            15, 0.7,   // At zoom 15, size = 1.2
-            18, 1,     // At zoom 15, size = 1.2
-            20, 1.2,
+            8, 0.15,
+            10, 0.3,
+            12, 0.5,
+            15, 0.85,
+            18, 1.2,
+            20, 1.5,
           ],
           'icon-rotate': ['get', 'bearing'],
           'icon-rotation-alignment': 'map',
@@ -329,12 +347,12 @@ const ACTransitMap = () => {
             'interpolate',
             ['linear'],
             ['zoom'],
-            8, 0.1,    // At zoom 8, size = 0.3
-            10, 0.2,   // At zoom 10, size = 0.5
-            12, 0.4,   // At zoom 12, size = 0.8
-            15, 0.7,   // At zoom 15, size = 1.2
-            18, 1,     // At zoom 15, size = 1.2
-            20, 1.2,
+            8, 0.15,
+            10, 0.3,
+            12, 0.5,
+            15, 0.85,
+            18, 1.2,
+            20, 1.5,
           ],
           'icon-rotate': ['get', 'bearing'],
           'icon-rotation-alignment': 'map',
