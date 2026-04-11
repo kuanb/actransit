@@ -94,6 +94,7 @@ const ACTransitMap = () => {
   const stopPopupRef = useRef(null);
   const [cacheAgeTick, setCacheAgeTick] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [routeInfo, setRouteInfo] = useState<{ count: number; vintage: string } | null>(null);
 
   // Re-render periodically so "min ago" stays accurate
   useEffect(() => {
@@ -410,6 +411,10 @@ const ACTransitMap = () => {
           if (map.current?.getSource('routes')) {
             (map.current.getSource('routes') as maplibregl.GeoJSONSource).setData(geojson);
           }
+          setRouteInfo({
+            count: geojson.features?.length ?? 0,
+            vintage: geojson.gtfs_vintage ?? 'unknown',
+          });
         })
         .catch(err => console.warn('Failed to load route geometries:', err));
     });
@@ -1154,7 +1159,7 @@ const ACTransitMap = () => {
             type="text"
             value={routeFilter}
             onChange={(e) => setRouteFilter(e.target.value)}
-            placeholder="e.g. 33, 51, 800"
+            placeholder="e.g. 88, 1T, P"
             style={{
               width: '100%',
               padding: '7px 10px',
@@ -1224,6 +1229,19 @@ const ACTransitMap = () => {
           </div>
         ) : (
           <div style={{ color: '#999' }}>Waiting for data...</div>
+        )}
+
+        {routeInfo && (
+          <>
+            <div style={{ borderTop: '1px solid #e5e5e5', margin: '8px 0' }} />
+            <div style={{ fontWeight: 600, fontSize: '12px', color: '#555', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Route lines
+            </div>
+            <div style={{ color: '#444', lineHeight: 1.6 }}>
+              <div><span style={{ color: '#888' }}>Routes:</span> {routeInfo.count}</div>
+              <div><span style={{ color: '#888' }}>Feed:</span> {routeInfo.vintage}</div>
+            </div>
+          </>
         )}
       </div>
 
