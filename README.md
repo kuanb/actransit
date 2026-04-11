@@ -25,6 +25,24 @@ A real-time bus tracker for [AC Transit](https://www.actransit.org/) (Alameda-Co
 | CI/CD | GitHub Actions |
 | Backend data | Val.run serverless functions (bus locations, history, stop predictions) |
 
+## Prerequisites
+
+This project requires **Node.js 24** (Active LTS). The repo includes `.nvmrc` and `.node-version` files so version managers pick it up automatically:
+
+```bash
+# nvm
+nvm install
+nvm use
+
+# fnm
+fnm install
+fnm use
+
+# Or any manager that reads .node-version (mise, asdf, volta, etc.)
+```
+
+Verify with `node --version` — you should see `v24.x.x`.
+
 ## Local Development
 
 ```bash
@@ -110,5 +128,7 @@ GitHub disables scheduled workflows after 60 days of repo inactivity. To prevent
 ├── tsconfig.app.json    # TypeScript config for app source
 ├── tsconfig.node.json   # TypeScript config for Node tooling
 ├── eslint.config.js     # ESLint flat config
-└── package.json         # Dependencies and scripts
+├── package.json         # Dependencies and scripts
+├── .nvmrc               # Node version for nvm / fnm
+└── .node-version        # Node version for mise / asdf / volta
 ```

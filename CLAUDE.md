@@ -6,8 +6,13 @@ Project context for AI assistants working on this codebase.
 
 AC Transit Live Bus Map — a React/TypeScript single-page app that shows real-time AC Transit bus positions on a MapLibre GL map, deployed to GitHub Pages. A separate Python script runs daily via GitHub Actions to extract GTFS route geometries into a GeoJSON file committed to the repo.
 
+## Node version
+
+Requires Node.js 24 (Active LTS, codename Krypton). Pinned via `.nvmrc`, `.node-version`, and `engines` in `package.json`. Run `nvm use` or `fnm use` to activate.
+
 ## Commands
 
+- `nvm use` / `fnm use` — activate the correct Node version
 - `npm install` — install dependencies
 - `npm run dev` — start Vite dev server (http://localhost:5173)
 - `npm run build` — production build to `dist/`
@@ -61,3 +66,4 @@ Two workflows:
 | `vite.config.ts` | Vite config (base path handling) |
 | `latest_routes.geojson` | Generated output — all AC Transit route geometries |
 | `last_run.txt` | Heartbeat timestamp from last GTFS pipeline run |
+| `.nvmrc` / `.node-version` | Pin Node.js version for local dev and CI |
