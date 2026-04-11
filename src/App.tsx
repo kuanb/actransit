@@ -1070,12 +1070,14 @@ const ACTransitMap = () => {
         height: '6px',
         zIndex: 1001,
         background: 'rgba(0, 0, 0, 0.08)',
+        boxShadow: '0 1px 6px rgba(22, 163, 74, 0.45)',
       }}>
         <div
           key={refreshKey}
           style={{
             height: '100%',
-            background: '#16a34a',
+            background: 'linear-gradient(90deg, #16a34a, #22d3ee)',
+            boxShadow: '0 0 8px rgba(22, 163, 74, 0.6)',
             animation: 'countdown 30s linear forwards',
           }}
         />
