@@ -1,5 +1,3 @@
-import './App.css'
-
 import React, { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 
@@ -804,16 +802,17 @@ const ACTransitMap = () => {
           });
         }
 
-        // Get pre-calculated average speed
         const historicalAvgMPH = tripAverageSpeedsRef.current[tripId] || null;
         const htmlString = `
-          <div style="font-family: Arial, sans-serif; font-size: 12px; color: #000">
-            <strong>Route: ${routeId}</strong><br/>
-            Trip: ${tripId}<br/>
-            Bearing: ${Math.round(bearing)}°<br/>
-            Speed: ${Math.round(speed)} mph<br/>
-            ${dataAge !== null ? `Data age: ${dataAge} old<br/>` : ''}
-            ${historicalAvgMPH ? `Avg Speed: ${historicalAvgMPH} mph` : ''}
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 13px; color: #1a1a1a; line-height: 1.5">
+            <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px">Route ${routeId}</div>
+            <div style="color: #555">Trip ${tripId}</div>
+            <div style="display: flex; gap: 12px; margin-top: 4px">
+              <span>${Math.round(bearing)}° bearing</span>
+              <span>${Math.round(speed)} mph</span>
+            </div>
+            ${historicalAvgMPH ? `<div style="color: #555; margin-top: 2px">Avg ${historicalAvgMPH} mph</div>` : ''}
+            ${dataAge !== null ? `<div style="color: #888; font-size: 11px; margin-top: 4px">${dataAge} ago</div>` : ''}
           </div>`
 
         popupRef.current = popup
@@ -974,10 +973,10 @@ const ACTransitMap = () => {
         });
 
         const htmlString = `
-          <div style="font-family: Arial, sans-serif; font-size: 12px; color: #000">
-            <strong>Stop ID: ${stpid}</strong><br/>
-            ${stpnm ? `Name: ${stpnm}<br/>` : ''}
-            Routes: ${routeNames ? JSON.parse(routeNames).join(', ') : 'None'}
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 13px; color: #1a1a1a; line-height: 1.5">
+            <div style="font-weight: 600; font-size: 15px; margin-bottom: 2px">${stpnm || `Stop ${stpid}`}</div>
+            ${stpnm ? `<div style="color: #888; font-size: 11px">ID ${stpid}</div>` : ''}
+            <div style="margin-top: 4px; color: #555">Routes: ${routeNames ? JSON.parse(routeNames).join(', ') : 'None'}</div>
           </div>`
 
         stopPopupRef.current = stopPopup
@@ -1008,225 +1007,166 @@ const ACTransitMap = () => {
     };
   }, []);
 
+  const panelFont = "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif";
+  const panelBase: React.CSSProperties = {
+    position: 'absolute',
+    background: 'rgba(255, 255, 255, 0.88)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    borderRadius: '10px',
+    boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
+    fontFamily: panelFont,
+    fontSize: '13px',
+    color: '#1a1a1a',
+    zIndex: 1000,
+  };
+
   return (
-    <div style={{ width: '100%', height: '100vh', position: 'relative', backgroundColor: 'red' }}>
-      {/* Map container */}
+    <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
       <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
-      
-      {/* Status overlay */}
-      <div style={{
-        position: 'absolute',
-        top: '20px',
-        left: '20px',
-        background: 'rgba(255, 255, 255, 0.95)',
-        padding: '15px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '14px',
-        maxWidth: '300px',
-        zIndex: 1000
-      }}>
-        <h3 style={{ 
-          margin: '0 0 10px 0', 
-          fontSize: '18px', 
-          color: '#333',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          🚌 AC Transit Live Map
-        </h3>
+
+      {/* Control panel */}
+      <div style={{ ...panelBase, top: '16px', left: '16px', padding: '16px', maxWidth: '280px' }}>
+        <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '12px' }}>
+          AC Transit Live
+        </div>
+
         {loading && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#666', fontSize: '12px' }}>
             <div style={{
-              width: '16px',
-              height: '16px',
+              width: '14px',
+              height: '14px',
               border: '2px solid #007cba',
               borderTop: '2px solid transparent',
               borderRadius: '50%',
-              animation: 'spin 1s linear infinite'
-            }}></div>
-            Loading bus locations...
+              animation: 'spin 1s linear infinite',
+              flexShrink: 0,
+            }} />
+            Loading...
           </div>
         )}
+
         {error && (
-          <div style={{ 
-            margin: '5px 0', 
-            color: '#dc3545',
-            padding: '8px',
-            background: '#f8d7da',
-            borderRadius: '4px',
-            fontSize: '12px'
+          <div style={{
+            padding: '8px 10px',
+            background: '#fef2f2',
+            border: '1px solid #fecaca',
+            borderRadius: '6px',
+            color: '#b91c1c',
+            fontSize: '12px',
+            marginBottom: '8px',
           }}>
-            ❌ {error}
+            {error}
           </div>
         )}
+
         {!loading && !error && (
-          <div>
-            <div style={{ 
-              margin: '5px 0', 
-              color: '#333',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px'
-            }}>
-              <span style={{ 
-                background: '#28a745', 
-                color: 'white', 
-                padding: '2px 6px', 
-                borderRadius: '12px',
+          <div style={{ marginBottom: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{
+                background: '#16a34a',
+                color: 'white',
+                padding: '1px 7px',
+                borderRadius: '10px',
                 fontSize: '12px',
-                fontWeight: 'bold'
+                fontWeight: 600,
               }}>
                 {filteredBusCount}
               </span>
-              buses tracked
+              <span style={{ color: '#444', fontSize: '13px' }}>buses tracked</span>
             </div>
             {routeFilter.trim() && (
-              <div style={{ 
-                margin: '2px 0', 
-                color: '#666',
-                fontSize: '11px',
-                fontStyle: 'italic'
-              }}>
-                filtered to {filteredBusCount} of {busData.length} total
+              <div style={{ color: '#888', fontSize: '11px', marginTop: '2px' }}>
+                {filteredBusCount} of {busData.length} total
               </div>
             )}
-            <p style={{ margin: '5px 0', color: '#666', fontSize: '12px' }}>
-              🔄 Updates every 30 seconds
-            </p>
+            <div style={{ color: '#999', fontSize: '11px', marginTop: '4px' }}>
+              Updates every 30 s
+            </div>
           </div>
         )}
-        
-        {/* Route Filter */}
-        <div style={{ marginTop: '10px' }}>
-          <label style={{ 
-            display: 'block', 
-            fontSize: '12px', 
-            color: '#333', 
-            marginBottom: '5px',
-            fontWeight: 'bold'
-          }}>
-            Route Filter:
+
+        <div style={{ marginBottom: '10px' }}>
+          <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#555', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Route filter
           </label>
           <input
             type="text"
             value={routeFilter}
             onChange={(e) => setRouteFilter(e.target.value)}
-            placeholder="e.g., 33, 51, 800..."
+            placeholder="e.g. 33, 51, 800"
             style={{
               width: '100%',
-              padding: '8px 10px',
-              border: '1px solid #ddd',
-              borderRadius: '4px',
-              fontSize: '12px',
-              boxSizing: 'border-box'
+              padding: '7px 10px',
+              border: '1px solid #d4d4d4',
+              borderRadius: '6px',
+              fontSize: '13px',
+              boxSizing: 'border-box',
+              outline: 'none',
+              fontFamily: panelFont,
             }}
           />
-          {routeFilter && (
-            <div style={{ 
-              marginTop: '5px', 
-              fontSize: '11px', 
-              color: '#666',
-              fontStyle: 'italic'
-            }}>
-              Showing buses with route ID containing "{routeFilter}"
-            </div>
-          )}
         </div>
-        <button
-          onClick={fetchBusLocations}
-          disabled={loading}
-          style={{
-            marginTop: '10px',
-            padding: '10px 16px',
-            background: loading ? '#ccc' : 'linear-gradient(135deg, #007cba, #005a8b)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            fontSize: '12px',
-            fontWeight: 'bold',
-            transition: 'all 0.2s',
-            width: '100%'
-          }}
-        >
-          {loading ? '🔄 Refreshing...' : '🔄 Refresh Now'}
-        </button>
 
-        {/* Show All Button */}
-        <button
-          onClick={() => {
-            setRouteFilter('');
-            setActiveStopFilter(null);
-            // Clear any active popups
-            if (popupRef.current) {
-              popupRef.current.remove();
-              popupRef.current = null;
-            }
-            if (stopPopupRef.current) {
-              stopPopupRef.current.remove();
-              stopPopupRef.current = null;
-            }
-          }}
-          style={{
-            marginTop: '8px',
-            padding: '8px 12px',
-            background: 'linear-gradient(135deg, #28a745, #20c997)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '11px',
-            fontWeight: 'bold',
-            transition: 'all 0.2s',
-            width: '100%'
-          }}
-        >
-          🌐 Show All
-        </button>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <button
+            onClick={fetchBusLocations}
+            disabled={loading}
+            style={{
+              flex: 1,
+              padding: '8px 0',
+              background: loading ? '#e5e5e5' : '#0369a1',
+              color: loading ? '#999' : 'white',
+              border: 'none',
+              borderRadius: '6px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontSize: '12px',
+              fontWeight: 600,
+              fontFamily: panelFont,
+            }}
+          >
+            {loading ? 'Refreshing...' : 'Refresh'}
+          </button>
+          <button
+            onClick={() => {
+              setRouteFilter('');
+              setActiveStopFilter(null);
+              if (popupRef.current) { popupRef.current.remove(); popupRef.current = null; }
+              if (stopPopupRef.current) { stopPopupRef.current.remove(); stopPopupRef.current = null; }
+            }}
+            style={{
+              flex: 1,
+              padding: '8px 0',
+              background: '#f5f5f5',
+              color: '#444',
+              border: '1px solid #d4d4d4',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 600,
+              fontFamily: panelFont,
+            }}
+          >
+            Show all
+          </button>
+        </div>
       </div>
 
-      {/* Cached vehicle position time range (Pacific); older on top */}
-      <div style={{
-        position: 'absolute',
-        bottom: '20px',
-        right: '20px',
-        background: 'rgba(255, 255, 255, 0.95)',
-        padding: '12px 14px',
-        borderRadius: '8px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '12px',
-        maxWidth: '340px',
-        zIndex: 1000
-      }}>
-        <div style={{
-          fontWeight: 'bold',
-          color: '#333',
-          marginBottom: '8px',
-          fontSize: '13px'
-        }}>
-          Cached vehicle positions
+      {/* Cache age panel */}
+      <div style={{ ...panelBase, bottom: '16px', right: '16px', padding: '12px 14px', maxWidth: '320px', fontSize: '12px' }}>
+        <div style={{ fontWeight: 600, fontSize: '12px', color: '#555', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          Vehicle cache
         </div>
         {vehicleTimestampDisplay ? (
-          <div style={{ color: '#444', lineHeight: 1.55 }}>
-            <div>
-              <span style={{ color: '#666' }}>Older:</span>{' '}
-              {vehicleTimestampDisplay.min}
-            </div>
-            <div style={{ marginTop: '6px' }}>
-              <span style={{ color: '#666' }}>Newest:</span>{' '}
-              {vehicleTimestampDisplay.max}
-            </div>
+          <div style={{ color: '#444', lineHeight: 1.6 }}>
+            <div><span style={{ color: '#888' }}>Oldest:</span> {vehicleTimestampDisplay.min}</div>
+            <div><span style={{ color: '#888' }}>Newest:</span> {vehicleTimestampDisplay.max}</div>
           </div>
         ) : (
-          <div style={{ color: '#888' }}>No timestamps yet</div>
+          <div style={{ color: '#999' }}>Waiting for data...</div>
         )}
       </div>
 
-      {/* CSS for animations */}
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
