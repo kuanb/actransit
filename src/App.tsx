@@ -436,38 +436,34 @@ const ACTransitMap = () => {
         }
       });
 
-      // Add layer for bus arrows
       map.current.addLayer({
         id: 'bus-history',
-        type: 'symbol',
+        type: 'circle',
         source: 'busesHistory',
-        layout: {
-          'icon-image': 'bus',
-          'icon-size': [
-            'interpolate',
-            ['linear'],
-            ['zoom'],
-            8, 0.15,
-            10, 0.3,
-            12, 0.5,
-            15, 0.85,
-            18, 1.2,
-            20, 1.5,
-          ],
-          'icon-rotate': ['get', 'bearing'],
-          'icon-rotation-alignment': 'map',
-          'icon-allow-overlap': true,
-          'icon-ignore-placement': true
-        },
         paint: {
-          'icon-color': '#ff4444',
-          'icon-opacity': [
+          'circle-radius': [
+            'interpolate', ['linear'], ['zoom'],
+            8, 2,
+            12, 3,
+            15, 5,
+            18, 7,
+          ],
+          'circle-color': '#ff4444',
+          'circle-stroke-color': '#fff',
+          'circle-stroke-width': 1,
+          'circle-opacity': [
             'case',
             ['==', ['get', 'show-history'], true],
-            0.3,
+            0.7,
             0
-          ]
-        }
+          ],
+          'circle-stroke-opacity': [
+            'case',
+            ['==', ['get', 'show-history'], true],
+            0.5,
+            0
+          ],
+        },
       });
 
       // Add layer for bus history lines
