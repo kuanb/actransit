@@ -56,10 +56,17 @@ def fmt_date(raw: str) -> str:
 
 
 def read_existing_vintage(geojson_path: str) -> str | None:
-    """Read the gtfs_vintage field from an existing GeoJSON file, or None."""
+    """Read the gtfs_vintage field from an existing GeoJSON file, or None.
+
+    Returns None (forcing rebuild) if the file is missing direction_id on
+    features, indicating it was generated before the multi-direction update.
+    """
     try:
         with open(geojson_path) as f:
             data = json.load(f)
+        feats = data.get("features", [])
+        if feats and "direction_id" not in feats[0].get("properties", {}):
+            return None
         return data.get("gtfs_vintage")
     except (FileNotFoundError, json.JSONDecodeError, KeyError):
         return None
@@ -172,7 +179,9 @@ def main() -> None:
 
     print(f"New vintage detected (was {existing_vintage!r}, now {vintage!r}). Building GeoJSON…")
     geojson = build_geojson(zf, vintage, start_fmt, end_fmt)
-    print(f"  {len(geojson['features'])} routes extracted")
+    feats = geojson["features"]
+    route_ids = set(f["properties"]["route_id"] for f in feats)
+    print(f"  {len(feats)} features across {len(route_ids)} routes")
 
     with open(out_path, "w") as f:
         json.dump(geojson, f)
