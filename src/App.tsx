@@ -935,6 +935,17 @@ const ACTransitMap = () => {
       // maxWidth: '300px'
     });
 
+    const focusRouteLines = (routeId: string | null) => {
+      if (!map.current?.getLayer('route-lines')) return;
+      if (routeId) {
+        map.current.setFilter('route-lines', ['==', ['get', 'route_short_name'], routeId]);
+        map.current.setPaintProperty('route-lines', 'line-opacity', 0.25);
+      } else {
+        map.current.setFilter('route-lines', null);
+        map.current.setPaintProperty('route-lines', 'line-opacity', 0.55);
+      }
+    };
+
     const handleClick = (e) => {
       const features = map.current.queryRenderedFeatures(e.point, {
         layers: ['bus-arrows']
@@ -945,7 +956,8 @@ const ACTransitMap = () => {
         const { routeId, bearing, tripId, speed, timestamp } = feature.properties;
         const dataAge = formatDataAgeMinutesSeconds(timestamp);
 
-        // Show history for matching trip IDs
+        focusRouteLines(routeId);
+
         const historySource = map.current.getSource('busesHistory');
         if (historySource) {
           const currentData = historySource._data;
@@ -1001,8 +1013,8 @@ const ACTransitMap = () => {
       } else {
         popup.remove();
         popupRef.current = null;
-        
-        // Hide all history when clicking elsewhere
+        focusRouteLines(null);
+
         const historySource = map.current.getSource('busesHistory');
         if (historySource) {
           const currentData = historySource._data;
@@ -1047,9 +1059,10 @@ const ACTransitMap = () => {
 
       if (features.length > 0) {
         const feature = features[0];
-        const { tripId } = feature.properties;
+        const { tripId, routeId } = feature.properties;
 
-        // Show history for matching trip IDs on hover
+        focusRouteLines(routeId);
+
         const historySource = map.current.getSource('busesHistory');
         if (historySource) {
           const currentData = historySource._data;
@@ -1088,9 +1101,8 @@ const ACTransitMap = () => {
     };
 
     const handleMouseLeave = () => {
-      // Hide all history when mouse leaves
+      focusRouteLines(null);
 
-      // Hide history for busesHistory
       const historySource = map.current.getSource('busesHistory');
       if (historySource) {
         const currentData = historySource._data;
