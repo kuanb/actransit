@@ -1067,7 +1067,7 @@ const ACTransitMap = () => {
         top: 0,
         left: 0,
         right: 0,
-        height: '3px',
+        height: '6px',
         zIndex: 1001,
         background: 'rgba(0, 0, 0, 0.08)',
       }}>
