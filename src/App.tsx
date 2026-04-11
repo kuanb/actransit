@@ -330,9 +330,9 @@ const ACTransitMap = () => {
         }
       });
 
-      // Add source for bus history lines
       map.current.addSource('busesHistoryLines', {
         type: 'geojson',
+        lineMetrics: true,
         data: {
           type: 'FeatureCollection',
           features: []
@@ -479,12 +479,17 @@ const ACTransitMap = () => {
           'line-cap': 'round'
         },
         paint: {
-          'line-color': '#ff4444',
+          'line-gradient': [
+            'interpolate', ['linear'], ['line-progress'],
+            0, 'rgba(255, 68, 68, 0.15)',
+            0.7, 'rgba(255, 68, 68, 0.5)',
+            1, 'rgba(255, 68, 68, 0.85)',
+          ],
           'line-width': 8,
           'line-opacity': [
             'case',
             ['==', ['get', 'show-history'], true],
-            0.6,
+            1,
             0
           ]
         }
