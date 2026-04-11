@@ -318,6 +318,9 @@ const ACTransitMap = () => {
       style: 'https://api.maptiler.com/maps/streets-v2-light/style.json?key=smyKrds9C01IazzvU1Tr',
       center: [-122.2681, 37.8044],
       zoom: 10,
+      maxPitch: 0,
+      pitchWithRotate: false,
+      touchPitch: false,
       logoPosition: 'bottom-left',
       attributionControl: false,
     });
