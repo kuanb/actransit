@@ -97,6 +97,7 @@ const ACTransitMap = () => {
   const [routeInfo, setRouteInfo] = useState<{ count: number; vintage: string } | null>(null);
   const [routeNames, setRouteNames] = useState<string[]>([]);
   const [showRoutePicker, setShowRoutePicker] = useState(false);
+  const prevRouteFilterRef = useRef('');
 
   // Re-render periodically so "min ago" stays accurate
   useEffect(() => {
@@ -486,15 +487,19 @@ const ACTransitMap = () => {
       console.log('Updated map with features');
     }
 
-    // Fit map to show all buses if we have valid coordinates
+    // Fit map when filter changes or on first load
+    const filterChanged = routeFilter.trim() !== prevRouteFilterRef.current.trim();
+    prevRouteFilterRef.current = routeFilter;
+
     if (features.length > 0) {
       const coordinates = features.map(f => f.geometry.coordinates);
       const bounds = coordinates.reduce((bounds, coord) => {
         return bounds.extend(coord);
       }, new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
 
-      if (BUS_LOCATIONS_FETCH_COUNT === 1) map.current.fitBounds(bounds, { padding: 50 });
-      console.log('Fitted bounds to show all buses');
+      if (BUS_LOCATIONS_FETCH_COUNT === 1 || filterChanged) {
+        map.current.fitBounds(bounds, { padding: 50, maxZoom: 16 });
+      }
     }
   }, [busData, routeFilter, activeStopFilter]);
 
