@@ -1172,6 +1172,17 @@ const ACTransitMap = () => {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
+        .maplibregl-popup-close-button {
+          font-size: 20px;
+          color: #666;
+          padding: 2px 6px;
+          line-height: 1;
+        }
+        .maplibregl-popup-close-button:hover {
+          color: #000;
+          background: rgba(0, 0, 0, 0.06);
+          border-radius: 4px;
+        }
       `}</style>
     </div>
   );
