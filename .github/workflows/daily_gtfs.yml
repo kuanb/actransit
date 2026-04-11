@@ -1,0 +1,54 @@
+name: Daily GTFS Route Extraction
+
+on:
+  schedule:
+    - cron: "0 8 * * *"   # 8:00 UTC / midnight Pacific
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run extraction script
+        id: extract
+        continue-on-error: true
+        env:
+          ACTRANSIT_API_TOKEN: ${{ secrets.ACTRANSIT_API_TOKEN }}
+        run: python extract_routes.py
+
+      - name: Write heartbeat timestamp
+        run: echo "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" > last_run.txt
+
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add last_run.txt
+
+          if [ "${{ steps.extract.outcome }}" = "success" ] && [ -f latest_routes.geojson ]; then
+            git add latest_routes.geojson
+            VINTAGE="${{ steps.extract.outputs.vintage }}"
+            MSG="Update latest_routes.geojson — feed vintage ${VINTAGE:-unknown}"
+          else
+            MSG="Heartbeat: GTFS fetch failed, keeping workflow alive"
+          fi
+
+          if git diff --cached --quiet; then
+            echo "Nothing to commit."
+          else
+            git commit -m "$MSG"
+            git push
+          fi
