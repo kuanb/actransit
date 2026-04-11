@@ -1227,6 +1227,9 @@ const ACTransitMap = () => {
 
     const handleRouteLineClick = (e) => {
       if (!e.features?.length) return;
+      const hitBus = map.current.queryRenderedFeatures(e.point, { layers: ['bus-arrows'] });
+      const hitStop = map.current.queryRenderedFeatures(e.point, { layers: ['stops-circles'] });
+      if (hitBus.length > 0 || hitStop.length > 0) return;
       const feat = e.features[0];
       const props = feat.properties || {};
       const rows = [
