@@ -95,6 +95,8 @@ const ACTransitMap = () => {
   const [cacheAgeTick, setCacheAgeTick] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [routeInfo, setRouteInfo] = useState<{ count: number; vintage: string } | null>(null);
+  const [routeNames, setRouteNames] = useState<string[]>([]);
+  const [showRoutePicker, setShowRoutePicker] = useState(false);
 
   // Re-render periodically so "min ago" stays accurate
   useEffect(() => {
@@ -433,6 +435,10 @@ const ACTransitMap = () => {
             count: geojson.features?.length ?? 0,
             vintage: geojson.gtfs_vintage ?? 'unknown',
           });
+          const names: string[] = Array.from(new Set(
+            (geojson.features ?? []).map((f: any) => f.properties?.route_short_name).filter(Boolean)
+          ));
+          setRouteNames(names);
         })
         .catch(err => console.warn('Failed to load route geometries:', err));
     });
@@ -1173,22 +1179,41 @@ const ACTransitMap = () => {
           <label style={{ display: 'block', fontSize: '11px', fontWeight: 600, color: '#555', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             Route filter
           </label>
-          <input
-            type="text"
-            value={routeFilter}
-            onChange={(e) => setRouteFilter(e.target.value)}
-            placeholder="e.g. 88, 1T, P"
-            style={{
-              width: '100%',
-              padding: '7px 10px',
-              border: '1px solid #d4d4d4',
-              borderRadius: '6px',
-              fontSize: '13px',
-              boxSizing: 'border-box',
-              outline: 'none',
-              fontFamily: panelFont,
-            }}
-          />
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <input
+              type="text"
+              value={routeFilter}
+              onChange={(e) => setRouteFilter(e.target.value)}
+              placeholder="e.g. 88, 1T, P"
+              style={{
+                flex: 1,
+                padding: '7px 10px',
+                border: '1px solid #d4d4d4',
+                borderRadius: '6px',
+                fontSize: '13px',
+                boxSizing: 'border-box',
+                outline: 'none',
+                fontFamily: panelFont,
+              }}
+            />
+            <button
+              onClick={() => setShowRoutePicker(true)}
+              style={{
+                padding: '7px 10px',
+                background: '#f5f5f5',
+                color: '#444',
+                border: '1px solid #d4d4d4',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 600,
+                fontFamily: panelFont,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              Browse
+            </button>
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: '6px' }}>
@@ -1263,6 +1288,115 @@ const ACTransitMap = () => {
         )}
       </div>
 
+      {/* Route picker modal */}
+      {showRoutePicker && (() => {
+        const transbay = routeNames.filter(n => /^[A-Za-z]/.test(n)).sort((a, b) => a.localeCompare(b));
+        const local = routeNames.filter(n => /^\d/.test(n)).sort((a, b) => {
+          const na = parseInt(a, 10), nb = parseInt(b, 10);
+          return na !== nb ? na - nb : a.localeCompare(b);
+        });
+
+        const btnStyle: React.CSSProperties = {
+          padding: '12px 0',
+          minWidth: '72px',
+          border: '1px solid #d4d4d4',
+          borderRadius: '8px',
+          background: '#fff',
+          color: '#1a1a1a',
+          fontSize: '15px',
+          fontWeight: 600,
+          fontFamily: panelFont,
+          cursor: 'pointer',
+          textAlign: 'center',
+        };
+
+        return (
+          <div
+            onClick={() => setShowRoutePicker(false)}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              zIndex: 2000,
+              background: 'rgba(0,0,0,0.5)',
+              backdropFilter: 'blur(4px)',
+              WebkitBackdropFilter: 'blur(4px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px',
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: '#fff',
+                borderRadius: '14px',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                maxWidth: '480px',
+                width: '100%',
+                maxHeight: '80vh',
+                overflow: 'auto',
+                padding: '20px',
+                fontFamily: panelFont,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div style={{ fontWeight: 700, fontSize: '18px', color: '#1a1a1a' }}>Select a route</div>
+                <button
+                  onClick={() => setShowRoutePicker(false)}
+                  style={{
+                    background: 'none', border: 'none', fontSize: '22px', color: '#888',
+                    cursor: 'pointer', padding: '4px 8px', lineHeight: 1,
+                  }}
+                >
+                  &times;
+                </button>
+              </div>
+
+              {transbay.length > 0 && (
+                <>
+                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+                    Transbay
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+                    {transbay.map(name => (
+                      <button
+                        key={name}
+                        onClick={() => { setRouteFilter(name); setShowRoutePicker(false); }}
+                        style={{
+                          ...btnStyle,
+                          ...(routeFilter === name ? { background: '#0369a1', color: '#fff', borderColor: '#0369a1' } : {}),
+                        }}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              <div style={{ fontSize: '11px', fontWeight: 600, color: '#888', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+                Local
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {local.map(name => (
+                  <button
+                    key={name}
+                    onClick={() => { setRouteFilter(name); setShowRoutePicker(false); }}
+                    style={{
+                      ...btnStyle,
+                      ...(routeFilter === name ? { background: '#0369a1', color: '#fff', borderColor: '#0369a1' } : {}),
+                    }}
+                  >
+                    {name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       <style>{`
         @keyframes spin {
           0% { transform: rotate(0deg); }
@@ -1271,6 +1405,7 @@ const ACTransitMap = () => {
         @keyframes countdown {
           from { width: 100%; }
           to { width: 0%; }
+        }
         .maplibregl-popup-close-button {
           font-size: 20px;
           color: #666;
