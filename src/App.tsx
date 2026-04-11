@@ -1305,7 +1305,7 @@ const ACTransitMap = () => {
       <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
 
       {/* Control panel */}
-      <div style={{ ...panelBase, top: '16px', left: '16px', padding: '16px', maxWidth: '280px' }}>
+      <div style={{ ...panelBase, top: '16px', left: '16px', padding: '16px', maxWidth: 'min(280px, calc(100vw - 32px))', boxSizing: 'border-box' }}>
         <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '12px' }}>
           AC Transit Live
         </div>
