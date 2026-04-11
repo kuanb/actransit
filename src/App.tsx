@@ -190,7 +190,7 @@ const ACTransitMap = () => {
   const [routeNames, setRouteNames] = useState<string[]>([]);
   const [showRoutePicker, setShowRoutePicker] = useState(false);
   const routeGeometriesRef = useRef<Record<string, Coord[][]>>({});
-  const prevRouteFilterRef = useRef('');
+  const routeFilterRef = useRef('');
   const shouldZoomOnFilterChange = useRef(false);
 
   // Re-render periodically so "min ago" stays accurate
@@ -937,6 +937,27 @@ const ACTransitMap = () => {
     }
   }, [uniqueStops, activeStopFilter, routeFilter]);
 
+  // Filter route lines to match the active route filter
+  useEffect(() => {
+    routeFilterRef.current = routeFilter;
+    if (!map.current?.getLayer('route-lines')) return;
+
+    if (routeFilter.trim()) {
+      map.current.setFilter('route-lines', ['==', ['get', 'route_short_name'], routeFilter.trim()]);
+      map.current.setPaintProperty('route-lines', 'line-opacity', 0.8);
+    } else if (activeStopFilter && (activeStopFilter as any).routeNames?.length > 0) {
+      map.current.setFilter('route-lines', [
+        'in',
+        ['get', 'route_short_name'],
+        ['literal', (activeStopFilter as any).routeNames],
+      ]);
+      map.current.setPaintProperty('route-lines', 'line-opacity', 0.7);
+    } else {
+      map.current.setFilter('route-lines', null);
+      map.current.setPaintProperty('route-lines', 'line-opacity', 0.55);
+    }
+  }, [routeFilter, activeStopFilter]);
+
   // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(fetchBusLocations, 30000);
@@ -964,6 +985,9 @@ const ACTransitMap = () => {
       if (routeId) {
         map.current.setFilter('route-lines', ['==', ['get', 'route_short_name'], routeId]);
         map.current.setPaintProperty('route-lines', 'line-opacity', 0.25);
+      } else if (routeFilterRef.current.trim()) {
+        map.current.setFilter('route-lines', ['==', ['get', 'route_short_name'], routeFilterRef.current.trim()]);
+        map.current.setPaintProperty('route-lines', 'line-opacity', 0.8);
       } else {
         map.current.setFilter('route-lines', null);
         map.current.setPaintProperty('route-lines', 'line-opacity', 0.55);
