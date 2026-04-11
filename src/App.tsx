@@ -93,6 +93,7 @@ const ACTransitMap = () => {
   const popupRef = useRef(null);
   const stopPopupRef = useRef(null);
   const [cacheAgeTick, setCacheAgeTick] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Re-render periodically so "min ago" stays accurate
   useEffect(() => {
@@ -170,6 +171,7 @@ const ACTransitMap = () => {
       console.error('Error fetching bus data:', err);
     } finally {
       setLoading(false);
+      setRefreshKey((k) => k + 1);
     }
   };
 
@@ -1023,6 +1025,26 @@ const ACTransitMap = () => {
 
   return (
     <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
+      {/* Refresh countdown bar */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '3px',
+        zIndex: 1001,
+        background: 'rgba(0, 0, 0, 0.08)',
+      }}>
+        <div
+          key={refreshKey}
+          style={{
+            height: '100%',
+            background: '#16a34a',
+            animation: 'countdown 30s linear forwards',
+          }}
+        />
+      </div>
+
       <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
 
       {/* Control panel */}
@@ -1172,6 +1194,9 @@ const ACTransitMap = () => {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
+        @keyframes countdown {
+          from { width: 100%; }
+          to { width: 0%; }
         .maplibregl-popup-close-button {
           font-size: 20px;
           color: #666;
