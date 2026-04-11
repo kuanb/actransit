@@ -1286,6 +1286,16 @@ const ACTransitMap = () => {
             </div>
           </>
         )}
+
+        <div style={{ borderTop: '1px solid #e5e5e5', margin: '8px 0' }} />
+        <a
+          href="https://kuanbutts.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ color: '#aaa', fontSize: '11px', textDecoration: 'none' }}
+        >
+          Made in Oakland, CA by Kuan
+        </a>
       </div>
 
       {/* Route picker modal */}
