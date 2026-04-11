@@ -1031,6 +1031,9 @@ const ACTransitMap = () => {
             ${dataAge !== null ? `<div style="color: #888; font-size: 11px; margin-top: 4px">${dataAge} ago</div>` : ''}
           </div>`
 
+        if (stopPopupRef.current) { stopPopup.remove(); stopPopupRef.current = null; }
+        setActiveStopFilter(null);
+
         popupRef.current = popup
           .setLngLat(feature.geometry.coordinates)
           .setHTML(htmlString)
@@ -1194,6 +1197,8 @@ const ACTransitMap = () => {
             ${stpnm ? `<div style="color: #888; font-size: 11px">ID ${stpid}</div>` : ''}
             <div style="margin-top: 4px; color: #555">Routes: ${routeNames ? JSON.parse(routeNames).join(', ') : 'None'}</div>
           </div>`
+
+        if (popupRef.current) { popup.remove(); popupRef.current = null; }
 
         stopPopupRef.current = stopPopup
           .setLngLat(feature.geometry.coordinates)
