@@ -41,7 +41,8 @@ jobs:
           if [ "${{ steps.extract.outcome }}" != "success" ]; then
             MSG="Heartbeat: GTFS fetch failed, keeping workflow alive"
           elif [ "${{ steps.extract.outputs.changed }}" = "true" ]; then
-            git add latest_routes.geojson
+            cp latest_routes.geojson public/latest_routes.geojson
+            git add latest_routes.geojson public/latest_routes.geojson
             VINTAGE="${{ steps.extract.outputs.vintage }}"
             MSG="Update latest_routes.geojson — feed vintage ${VINTAGE:-unknown}"
           else

@@ -239,6 +239,32 @@ const ACTransitMap = () => {
         }
       });
 
+      // Add source for route geometries (lazy-loaded)
+      map.current.addSource('routes', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] }
+      });
+
+      map.current.addLayer({
+        id: 'route-lines',
+        type: 'line',
+        source: 'routes',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+        },
+        paint: {
+          'line-color': ['concat', '#', ['get', 'route_color']],
+          'line-width': [
+            'interpolate', ['linear'], ['zoom'],
+            8, 1,
+            12, 1.5,
+            16, 3,
+          ],
+          'line-opacity': 0.55,
+        },
+      });
+
       // Add source for stops
       map.current.addSource('stops', {
         type: 'geojson',
@@ -376,6 +402,16 @@ const ACTransitMap = () => {
 
       // Initial data fetch
       fetchBusLocations();
+
+      // Lazy-load route geometries after initial render
+      fetch(`${import.meta.env.BASE_URL}latest_routes.geojson`)
+        .then(r => r.json())
+        .then(geojson => {
+          if (map.current?.getSource('routes')) {
+            (map.current.getSource('routes') as maplibregl.GeoJSONSource).setData(geojson);
+          }
+        })
+        .catch(err => console.warn('Failed to load route geometries:', err));
     });
 
     return () => {
