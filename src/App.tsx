@@ -191,6 +191,7 @@ const ACTransitMap = () => {
   const [showRoutePicker, setShowRoutePicker] = useState(false);
   const routeGeometriesRef = useRef<Record<string, Coord[][]>>({});
   const prevRouteFilterRef = useRef('');
+  const shouldZoomOnFilterChange = useRef(false);
 
   // Re-render periodically so "min ago" stays accurate
   useEffect(() => {
@@ -598,19 +599,16 @@ const ACTransitMap = () => {
       console.log('Updated map with features');
     }
 
-    // Fit map when filter changes or on first load
-    const filterChanged = routeFilter.trim() !== prevRouteFilterRef.current.trim();
-    prevRouteFilterRef.current = routeFilter;
+    const shouldZoom = BUS_LOCATIONS_FETCH_COUNT === 1 || shouldZoomOnFilterChange.current;
+    shouldZoomOnFilterChange.current = false;
 
-    if (features.length > 0) {
+    if (features.length > 0 && shouldZoom) {
       const coordinates = features.map(f => f.geometry.coordinates);
       const bounds = coordinates.reduce((bounds, coord) => {
         return bounds.extend(coord);
       }, new maplibregl.LngLatBounds(coordinates[0], coordinates[0]));
 
-      if (BUS_LOCATIONS_FETCH_COUNT === 1 || filterChanged) {
-        map.current.fitBounds(bounds, { padding: 50, maxZoom: 16 });
-      }
+      map.current.fitBounds(bounds, { padding: 50, maxZoom: 16 });
     }
   }, [busData, routeFilter, activeStopFilter]);
 
@@ -1379,7 +1377,7 @@ const ACTransitMap = () => {
             <input
               type="text"
               value={routeFilter}
-              onChange={(e) => setRouteFilter(e.target.value)}
+              onChange={(e) => { shouldZoomOnFilterChange.current = true; setRouteFilter(e.target.value); }}
               placeholder="e.g. 88, 1T, P"
               style={{
                 flex: 1,
@@ -1568,7 +1566,7 @@ const ACTransitMap = () => {
                     {transbay.map(name => (
                       <button
                         key={name}
-                        onClick={() => { setRouteFilter(name); setShowRoutePicker(false); }}
+                        onClick={() => { shouldZoomOnFilterChange.current = true; setRouteFilter(name); setShowRoutePicker(false); }}
                         style={{
                           ...btnStyle,
                           ...(routeFilter === name ? { background: '#0369a1', color: '#fff', borderColor: '#0369a1' } : {}),
@@ -1588,7 +1586,7 @@ const ACTransitMap = () => {
                 {local.map(name => (
                   <button
                     key={name}
-                    onClick={() => { setRouteFilter(name); setShowRoutePicker(false); }}
+                    onClick={() => { shouldZoomOnFilterChange.current = true; setRouteFilter(name); setShowRoutePicker(false); }}
                     style={{
                       ...btnStyle,
                       ...(routeFilter === name ? { background: '#0369a1', color: '#fff', borderColor: '#0369a1' } : {}),
