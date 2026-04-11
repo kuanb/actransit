@@ -55,7 +55,24 @@ def fmt_date(raw: str) -> str:
     return raw
 
 
-def build_geojson(zf: zipfile.ZipFile) -> dict:
+def read_existing_vintage(geojson_path: str) -> str | None:
+    """Read the gtfs_vintage field from an existing GeoJSON file, or None."""
+    try:
+        with open(geojson_path) as f:
+            data = json.load(f)
+        return data.get("gtfs_vintage")
+    except (FileNotFoundError, json.JSONDecodeError, KeyError):
+        return None
+
+
+def set_output(key: str, value: str) -> None:
+    gh_output = os.environ.get("GITHUB_OUTPUT", "")
+    if gh_output:
+        with open(gh_output, "a") as f:
+            f.write(f"{key}={value}\n")
+
+
+def build_geojson(zf: zipfile.ZipFile, vintage: str, start_fmt: str, end_fmt: str) -> dict:
     shapes_rows = read_csv(zf, "shapes.txt")
     trips_rows = read_csv(zf, "trips.txt")
     routes_rows = read_csv(zf, "routes.txt")
@@ -63,7 +80,6 @@ def build_geojson(zf: zipfile.ZipFile) -> dict:
     if not shapes_rows or not trips_rows or not routes_rows:
         raise RuntimeError("GTFS zip is missing shapes.txt, trips.txt, or routes.txt")
 
-    # shape_id -> sorted list of (seq, lon, lat)
     shapes: dict[str, list[tuple[int, float, float]]] = defaultdict(list)
     for r in shapes_rows:
         shapes[r["shape_id"]].append((
@@ -74,12 +90,10 @@ def build_geojson(zf: zipfile.ZipFile) -> dict:
     for pts in shapes.values():
         pts.sort()
 
-    # route_id -> route metadata
     route_meta: dict[str, dict] = {}
     for r in routes_rows:
         route_meta[r["route_id"]] = r
 
-    # route_id -> set of shape_ids
     route_shapes: dict[str, set[str]] = defaultdict(set)
     for t in trips_rows:
         sid = t.get("shape_id", "")
@@ -87,7 +101,6 @@ def build_geojson(zf: zipfile.ZipFile) -> dict:
         if sid and rid:
             route_shapes[rid].add(sid)
 
-    # Pick the longest shape per route (most shape points ≈ full-length trip)
     features = []
     for route_id in sorted(route_meta):
         sids = route_shapes.get(route_id)
@@ -114,10 +127,6 @@ def build_geojson(zf: zipfile.ZipFile) -> dict:
             "properties": props,
         })
 
-    start_raw, end_raw = get_vintage_dates(zf)
-    start_fmt, end_fmt = fmt_date(start_raw), fmt_date(end_raw)
-    vintage = f"{start_fmt} to {end_fmt}" if start_fmt and end_fmt else "unknown"
-
     return {
         "type": "FeatureCollection",
         "gtfs_feed_start_date": start_fmt,
@@ -141,21 +150,30 @@ def main() -> None:
         print(f"::error::Failed to download GTFS feed: {exc}")
         sys.exit(2)
 
-    print("Building GeoJSON…")
-    geojson = build_geojson(zf)
-    print(f"  {len(geojson['features'])} routes extracted")
-    print(f"  vintage: {geojson['gtfs_vintage']}")
+    start_raw, end_raw = get_vintage_dates(zf)
+    start_fmt, end_fmt = fmt_date(start_raw), fmt_date(end_raw)
+    vintage = f"{start_fmt} to {end_fmt}" if start_fmt and end_fmt else "unknown"
+    print(f"  feed vintage: {vintage}")
+
+    set_output("vintage", vintage)
 
     out_path = os.path.join(os.environ.get("GITHUB_WORKSPACE", "."), "latest_routes.geojson")
+    existing_vintage = read_existing_vintage(out_path)
+
+    if existing_vintage == vintage:
+        print(f"Vintage unchanged ({vintage}), skipping GeoJSON rebuild.")
+        set_output("changed", "false")
+        return
+
+    print(f"New vintage detected (was {existing_vintage!r}, now {vintage!r}). Building GeoJSON…")
+    geojson = build_geojson(zf, vintage, start_fmt, end_fmt)
+    print(f"  {len(geojson['features'])} routes extracted")
+
     with open(out_path, "w") as f:
         json.dump(geojson, f)
     print(f"Wrote {out_path}")
 
-    # Expose vintage for the workflow commit message
-    gh_output = os.environ.get("GITHUB_OUTPUT", "")
-    if gh_output:
-        with open(gh_output, "a") as f:
-            f.write(f"vintage={geojson['gtfs_vintage']}\n")
+    set_output("changed", "true")
 
 
 if __name__ == "__main__":

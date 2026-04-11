@@ -38,12 +38,15 @@ jobs:
 
           git add last_run.txt
 
-          if [ "${{ steps.extract.outcome }}" = "success" ] && [ -f latest_routes.geojson ]; then
+          if [ "${{ steps.extract.outcome }}" != "success" ]; then
+            MSG="Heartbeat: GTFS fetch failed, keeping workflow alive"
+          elif [ "${{ steps.extract.outputs.changed }}" = "true" ]; then
             git add latest_routes.geojson
             VINTAGE="${{ steps.extract.outputs.vintage }}"
             MSG="Update latest_routes.geojson — feed vintage ${VINTAGE:-unknown}"
           else
-            MSG="Heartbeat: GTFS fetch failed, keeping workflow alive"
+            VINTAGE="${{ steps.extract.outputs.vintage }}"
+            MSG="Heartbeat: feed vintage unchanged (${VINTAGE:-unknown})"
           fi
 
           if git diff --cached --quiet; then
