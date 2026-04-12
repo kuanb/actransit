@@ -1320,7 +1320,7 @@ const ACTransitMap = () => {
   };
 
   return (
-    <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
+    <div style={{ width: '100%', height: '100dvh', position: 'relative' }}>
       {/* Refresh countdown bar */}
       <div style={{
         position: 'absolute',
@@ -1346,7 +1346,7 @@ const ACTransitMap = () => {
       <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
 
       {/* Control panel */}
-      <div style={{ ...panelBase, top: '16px', left: '16px', padding: '16px', maxWidth: 'min(280px, calc(100vw - 32px))', boxSizing: 'border-box' }}>
+      <div style={{ ...panelBase, top: 'max(16px, env(safe-area-inset-top, 0px))', left: 'max(16px, env(safe-area-inset-left, 0px))', padding: '16px', maxWidth: 'min(280px, calc(100vw - 32px))', boxSizing: 'border-box' }}>
         <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '12px' }}>
           AC Transit Live
         </div>
@@ -1494,11 +1494,11 @@ const ACTransitMap = () => {
       {/* Cache age panel */}
       <div style={{
         ...panelBase,
-        bottom: '16px',
-        right: '16px',
+        bottom: 'max(16px, env(safe-area-inset-bottom, 0px))',
+        right: 'max(16px, env(safe-area-inset-right, 0px))',
         padding: '12px 14px',
         maxWidth: 'min(320px, calc(100vw - 32px))',
-        maxHeight: 'calc(100vh - 32px)',
+        maxHeight: 'calc(100dvh - 32px)',
         boxSizing: 'border-box',
         fontSize: '12px',
         overflow: 'hidden',
