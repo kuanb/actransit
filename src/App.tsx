@@ -1418,6 +1418,7 @@ const ACTransitMap = () => {
               placeholder="e.g. 88, 1T, P"
               style={{
                 flex: 1,
+                minWidth: 0,
                 padding: '7px 10px',
                 border: '1px solid #d4d4d4',
                 borderRadius: '6px',
