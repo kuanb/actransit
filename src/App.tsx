@@ -587,7 +587,7 @@ const ACTransitMap = () => {
     if (routeFilter.trim()) {
       features = features.filter(feature => 
         feature.properties.routeId && 
-        feature.properties.routeId.includes(routeFilter.trim())
+        feature.properties.routeId.toLowerCase() === routeFilter.trim().toLowerCase()
       );
       console.log('Filtered to', features.length, 'buses matching route filter:', routeFilter);
     }
@@ -631,7 +631,7 @@ const ACTransitMap = () => {
     const features = convertBusDataToFeatures(busData);
     return features.filter(feature => 
       feature.properties.routeId && 
-      feature.properties.routeId.includes(routeFilter.trim())
+      feature.properties.routeId.toLowerCase() === routeFilter.trim().toLowerCase()
     ).length;
   }, [busData, routeFilter]);
 
@@ -939,7 +939,7 @@ const ACTransitMap = () => {
       stopFeatures = stopFeatures.filter(feature => {
         const stopRouteNames = feature.properties.routeNames || [];
         return stopRouteNames.some(routeName => 
-          routeName.includes(routeFilter.trim())
+          routeName.toLowerCase() === routeFilter.trim().toLowerCase()
         );
       });
       console.log('Filtered to', stopFeatures.length, 'stops matching route text filter:', routeFilter);
@@ -960,7 +960,7 @@ const ACTransitMap = () => {
     if (!map.current?.getLayer('route-lines')) return;
 
     if (routeFilter.trim()) {
-      map.current.setFilter('route-lines', ['==', ['get', 'route_short_name'], routeFilter.trim()]);
+      map.current.setFilter('route-lines', ['==', ['downcase', ['get', 'route_short_name']], routeFilter.trim().toLowerCase()]);
       map.current.setPaintProperty('route-lines', 'line-opacity', 0.8);
     } else if (activeStopFilter && (activeStopFilter as any).routeNames?.length > 0) {
       map.current.setFilter('route-lines', [
@@ -1003,7 +1003,7 @@ const ACTransitMap = () => {
         map.current.setFilter('route-lines', ['==', ['get', 'route_short_name'], routeId]);
         map.current.setPaintProperty('route-lines', 'line-opacity', 0.25);
       } else if (routeFilterRef.current.trim()) {
-        map.current.setFilter('route-lines', ['==', ['get', 'route_short_name'], routeFilterRef.current.trim()]);
+        map.current.setFilter('route-lines', ['==', ['downcase', ['get', 'route_short_name']], routeFilterRef.current.trim().toLowerCase()]);
         map.current.setPaintProperty('route-lines', 'line-opacity', 0.8);
       } else {
         map.current.setFilter('route-lines', null);
