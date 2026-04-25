@@ -1499,6 +1499,28 @@ const ACTransitMap = () => {
             Show all
           </button>
         </div>
+
+        <a
+          href="https://kuanbutts.com/actransit_perf_v2/"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'block',
+            marginTop: '10px',
+            padding: '8px 10px',
+            background: '#fafafa',
+            color: '#1a1a1a',
+            border: '1px solid #d4d4d4',
+            borderRadius: '6px',
+            fontSize: '12px',
+            fontWeight: 600,
+            fontFamily: panelFont,
+            textAlign: 'center',
+            textDecoration: 'none',
+          }}
+        >
+          Performance Dashboard &rarr;
+        </a>
       </div>
 
       {/* Cache age panel */}
@@ -1568,26 +1590,6 @@ const ACTransitMap = () => {
             </>
           )}
 
-          <div style={{ borderTop: '1px solid #e5e5e5', margin: '8px 0' }} />
-          <a
-            href="https://kuanbutts.com/actransit_perf_v2/"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-block',
-              padding: '6px 10px',
-              border: '1px solid #d4d4d4',
-              borderRadius: '6px',
-              background: '#fafafa',
-              color: '#1a1a1a',
-              fontSize: '12px',
-              fontWeight: 600,
-              textDecoration: 'none',
-              fontFamily: panelFont,
-            }}
-          >
-            Performance Dashboard &rarr;
-          </a>
           <div style={{ borderTop: '1px solid #e5e5e5', margin: '8px 0' }} />
           <a
             href="https://kuanbutts.com"
