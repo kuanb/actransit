@@ -244,7 +244,10 @@ const ACTransitMap = () => {
   const fetchBusLocations = async () => {
     try {
       setLoading(true);
-      const response = await fetch('https://storage.googleapis.com/transit-203605-actransit-cache/latest.json');
+      const response = await fetch(
+        'https://storage.googleapis.com/transit-203605-actransit-cache/latest.json',
+        { cache: 'no-store' }
+      );
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -254,7 +257,10 @@ const ACTransitMap = () => {
       setBusData(data);
 
       setLoading(true);
-      const historyResponse = await fetch('https://storage.googleapis.com/transit-203605-actransit-cache/history.json');
+      const historyResponse = await fetch(
+        'https://storage.googleapis.com/transit-203605-actransit-cache/history.json',
+        { cache: 'no-store' }
+      );
       if (!historyResponse.ok) {
         throw new Error(`HTTP error! status: ${historyResponse.status}`);
       }
@@ -289,7 +295,10 @@ const ACTransitMap = () => {
   // Fetch route stop predictions
   const fetchRouteStopPredictions = async () => {
     try {
-      const response = await fetch('https://storage.googleapis.com/transit-203605-actransit-cache/route_stops.json');
+      const response = await fetch(
+        'https://storage.googleapis.com/transit-203605-actransit-cache/route_stops.json',
+        { cache: 'no-store' }
+      );
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
