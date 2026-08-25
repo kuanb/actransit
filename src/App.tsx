@@ -1501,7 +1501,7 @@ const ACTransitMap = () => {
         </div>
 
         <a
-          href="https://kuanbutts.com/actransit_perf_v2/"
+          href="https://ac-transit.com/report-card/"
           target="_blank"
           rel="noopener noreferrer"
           style={{
